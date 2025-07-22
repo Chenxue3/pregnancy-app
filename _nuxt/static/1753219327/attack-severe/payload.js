@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/attack-severe", (function(a){return {data:[{}],fetch:{},mutations:[["setCurrentContent",{slug:"severe",title:a,heading:a,icon:"mdi-heart-minus",dataFile:"attack-severe",category:"error",subTitle:"subError",model:{name:"LargeInfarct"},parentTopic:{slug:"attack",heading:"Heart Attack",title:"Attack"}}]]}}("Severe")));

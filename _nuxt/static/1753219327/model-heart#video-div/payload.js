@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/model-heart", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Home",heading:"Heading",icon:"mdi-home-heart",dataFile:"heart-main",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"model",heading:"Te Manawa",title:"Template"}}]]});

@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/electricity-healthy", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Healthy",heading:"Electrocardiograms",icon:"mdi-battery-heart",dataFile:"electricity-healthy",category:"success",subTitle:"subSuccess",model:{name:"NormalElectricity"},parentTopic:{slug:"electricity",heading:"Heart Electricity",title:"Electricity"}}]]});

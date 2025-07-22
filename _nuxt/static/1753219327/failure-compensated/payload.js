@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/failure-compensated", (function(a){return {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:a,heading:a,icon:"mdi-heart-cog",dataFile:"failure-compensated",category:"warning",subTitle:"subWarning",model:{name:"CompensatedFailure"},parentTopic:{slug:"failure",heading:"Heart Failure",title:"Failure"}}]]}}("Compensated")));

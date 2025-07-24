@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/pregnancy-baby", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Baby Health",heading:"How do we check on baby's health?",icon:"mdi-baby-face-outline",dataFile:"check-baby-health",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"pregnancy",heading:"What is Happening in Pregnancy?",title:"Pregnancy"}}]]});

@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/ultrasound-model", (function(a,b){return {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Baby",heading:a,icon:"mdi-baby-face-outline",dataFile:b,category:"success",subTitle:"subSuccess",model:{name:"NormalElectricity"},parentTopic:{slug:b,heading:"What does my ultrasound scan mean",title:a}}]]}}("Ultrasound","ultrasound")));

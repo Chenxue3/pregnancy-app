@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/conditions-fetal", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Fetal Growth",heading:"Reduced Fetal Growth",icon:"mdi-heart-minus",dataFile:"fetal-growth-restruction",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"conditions",heading:"Pregnancy Concerns",title:"Concerns"}}]]});

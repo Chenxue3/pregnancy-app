@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/pregnancy-placenta", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Placenta Roles",heading:"Roles of the Placenta",icon:"mdi-bowl-outline",dataFile:"roles-of-placenta",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"pregnancy",heading:"What is Happening in Pregnancy?",title:"Pregnancy"}}]]});

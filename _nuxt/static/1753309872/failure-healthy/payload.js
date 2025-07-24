@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/failure-healthy", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Healthy",heading:"Chronic Problems",icon:"mdi-account-heart",dataFile:"failure-healthy",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"failure",heading:"Heart Failure",title:"Failure"}}]]});

@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/attack-healthy", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Healthy",heading:"Coronary Arteries",icon:"mdi-heart-pulse",dataFile:"attack-healthy",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"attack",heading:"Heart Attack",title:"Attack"}}]]});

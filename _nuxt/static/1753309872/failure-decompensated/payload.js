@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/failure-decompensated", (function(a){return {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:a,heading:a,icon:"mdi-heart-remove",dataFile:"failure-decompensated",category:"error",subTitle:"subError",model:{name:"DecompensatedFailure"},parentTopic:{slug:"failure",heading:"Heart Failure",title:"Failure"}}]]}}("Decompensated")));

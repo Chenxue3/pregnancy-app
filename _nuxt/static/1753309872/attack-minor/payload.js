@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/attack-minor", (function(a){return {data:[{}],fetch:{},mutations:[["setCurrentContent",{slug:"minor",title:a,heading:a,icon:"mdi-heart-half-full",dataFile:"attack-minor",category:"warning",subTitle:"subWarning",model:{name:"SmallInfarct"},parentTopic:{slug:"attack",heading:"Heart Attack",title:"Attack"}}]]}}("Minor")));

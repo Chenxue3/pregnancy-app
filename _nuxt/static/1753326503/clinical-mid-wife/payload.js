@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/clinical-mid-wife", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Midwife Lead Care",heading:"Midwife",icon:"mdi-account-heart",dataFile:"clinical-care-mid-wife",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"clinical",heading:"Clinical care pathways for pregnancy in Aotearoa NZ.",title:"Clinical Care"}}]]});

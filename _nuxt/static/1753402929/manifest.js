@@ -1,1 +1,0 @@
-__NUXT_JSONP__("manifest.js", {routes:["\u002Fpregnancy-placenta","\u002Fvideo","\u002Fultrasound-model","\u002Fpregnancy-changes","\u002Fpregnancy-baby","\u002Fabout","\u002Fconditions-fetal","\u002Fclinical-mid-wife"]})

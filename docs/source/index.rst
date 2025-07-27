@@ -13,6 +13,7 @@ Web App Template's documentation
    introduction/index
    technology/index
    implementation_structure/index
+   model/index
    Build&Deploy/index
    important_note/index
    FAQs/index

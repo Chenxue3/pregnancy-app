@@ -17,9 +17,9 @@
 # -- Project information -----------------------------------------------------
 
 
-project = 'Web App Template'
-copyright = '2023, Auckland Bioengineering Institute'
-author = 'Linkun Gao'
+project = 'Pregnancy App'
+copyright = '2025, Auckland Bioengineering Institute'
+author = 'Linkun Gao, Zoea Chen'
 
 # The full version, including alpha/beta/rc tags
 # The full version, including alpha/beta/rc tags

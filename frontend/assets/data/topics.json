@@ -5,10 +5,19 @@
     "icon": "mdi-human-pregnant",
     "subTopics": {
       "changes": {
-        "title": "Body Changes",
+        "title": "Body Change",
         "heading": "Changes To Your Body",
         "icon": "mdi-sine-wave",
         "dataFile": "preganancy-changes",
+        "category": "success",
+        "subTitle": "subSuccess",
+        "model": { "name": "NoInfarct" }
+      },
+      "fetal-dev": {
+        "title": "Fetal Growth",
+        "heading": "Fetal Development",
+        "icon": "mdi-baby-face",
+        "dataFile": "fetal-development",
         "category": "success",
         "subTitle": "subSuccess",
         "model": { "name": "NoInfarct" }
@@ -84,7 +93,7 @@
     }
   },
   "clinical": {
-    "title": "Clinical Care",
+    "title": "Clinical",
     "heading": "Clinical care pathways for pregnancy in Aotearoa NZ.",
     "icon": "mdi-heart-off",
     "subTopics": {

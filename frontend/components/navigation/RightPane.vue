@@ -247,7 +247,7 @@ export default {
     visualizeUltrasoundMetrics(metricsData) {
       console.log('[RightPane] Visualizing ultrasound metrics in model:', metricsData);
       
-      // TODO: Implement this method
+      // Placeholder for future model integration
       // This method will be expanded to:
       // 1. Analyze the metrics interpretation
       // 2. Adjust model visualization based on risk level
@@ -308,7 +308,7 @@ export default {
     visualizeConditions(conditionData) {
       console.log('[RightPane] Visualizing pregnancy conditions in model:', conditionData);
       
-      // TODO: Implement this method for model integration
+      // Placeholder for future model integration
       // This method will be expanded to:
       // 1. Analyze the selected conditions
       // 2. Load appropriate placental models based on conditions
@@ -345,7 +345,7 @@ export default {
         console.log('[RightPane] Future: Load larger placental model');
       }
       
-      // TODO: Apply visual changes to the 3D model
+      // Future: Apply visual changes to the 3D model
       // - Model scaling based on condition effects
       // - Color coding for different risk levels
       // - Highlighting specific areas affected by conditions

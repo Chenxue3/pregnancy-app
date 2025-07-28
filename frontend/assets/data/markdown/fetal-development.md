@@ -1,0 +1,1 @@
+How does the fetal development affect the placenta?

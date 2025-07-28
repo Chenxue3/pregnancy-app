@@ -28,7 +28,7 @@
         </div>
       </div>
 
-    
+      
 
    
       <br />
@@ -49,6 +49,8 @@
           </div>
         </div>
       </div>
+
+      <br />
 
       <!-- Model Information -->
       <div class="control-section">

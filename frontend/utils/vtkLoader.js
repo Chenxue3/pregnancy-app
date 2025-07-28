@@ -8,6 +8,117 @@
  * await loader.loadVTKFile('/path/to/file.vtk', options)
  */
 
+// Camera Configuration Constants
+const CAMERA_CONSTANTS = {
+  // Default camera settings
+  DEFAULT_POSITION: [115, 80, 115],
+  DEFAULT_TARGET: [0, 0, 0],
+  DEFAULT_UP: [0, 1, 0],
+  
+  // Safety fallback positions
+  SAFE_FALLBACK_POSITION: [60, 40, 60],
+  SAFE_FALLBACK_TARGET: [0, 0, 0],
+  SAFE_FALLBACK_UP: [0, 1, 0],
+  
+  // Minimum safe distance between camera and target
+  MIN_CAMERA_DISTANCE: 0.1,
+  
+  // Model size scaling factor for camera distance
+  CAMERA_DISTANCE_SCALE: 0.9,
+  
+  // Predefined view configurations
+  PREDEFINED_VIEWS: {
+    front: {
+      position: [0, 0, 180],
+      target: [0, 0, 0],
+      up: [0, 1, 0]
+    },
+    top: {
+      position: [0, 180, 0],
+      target: [0, 0, 0],
+      up: [0, 0, -1]
+    },
+    side: {
+      position: [180, 0, 0],
+      target: [0, 0, 0],
+      up: [0, 1, 0]
+    },
+    isometric: {
+      position: [140, 105, 140],
+      target: [0, 0, 0],
+      up: [0, 1, 0]
+    },
+    closeup: {
+      position: [80, 60, 80],
+      target: [0, 0, 0],
+      up: [0, 1, 0]
+    },
+    wide: {
+      position: [250, 180, 250],
+      target: [0, 0, 0],
+      up: [0, 1, 0]
+    }
+  },
+  
+  // Camera positioning multipliers for optimal view calculation
+  OPTIMAL_VIEW_FACTORS: {
+    X_FACTOR: 0.7,
+    Y_FACTOR: 0.5,
+    Z_FACTOR: 0.7
+  }
+};
+
+// Color and Rendering Constants
+const COLOR_CONSTANTS = {
+  // Default color values
+  DEFAULT_COLOR: 0xff2222,
+  DEFAULT_OPACITY: 0.9,
+  DEFAULT_RADIUS_FALLBACK: 0.1,
+  
+  // Color mapping parameters
+  COLOR_MAPPING: {
+    NONLINEAR_EXPONENT: 0.4,
+    NEUTRAL_VALUE: 0.5,
+    
+    // Low to medium pressure (green to orange)
+    LOW_TO_MID: {
+      RED_START: 0.23,
+      RED_RANGE: 0.75,
+      GREEN_START: 0.70,
+      GREEN_RANGE: 0.23,
+      BLUE_START: 0.27,
+      BLUE_RANGE: -0.27
+    },
+    
+    // Medium to high pressure (orange to dark red)
+    MID_TO_HIGH: {
+      RED_START: 0.98,
+      RED_RANGE: -0.42,
+      GREEN_START: 0.93,
+      GREEN_RANGE: -0.81,
+      BLUE_CONSTANT: 0.00
+    }
+  },
+  
+  // Lighting configuration
+  LIGHTING: {
+    AMBIENT_COLOR: 0x664444,
+    AMBIENT_INTENSITY: 0.6,
+    MAIN_LIGHT_COLOR: 0xffffff,
+    MAIN_LIGHT_INTENSITY: 0.8,
+    FILL_LIGHT_COLOR: 0xffeedd,
+    FILL_LIGHT_INTENSITY: 0.4,
+    RIM_LIGHT_COLOR: 0xaaffff,
+    RIM_LIGHT_INTENSITY: 0.3,
+    INTERNAL_LIGHT1_COLOR: 0xff6666,
+    INTERNAL_LIGHT1_INTENSITY: 0.5,
+    INTERNAL_LIGHT1_DISTANCE: 100,
+    INTERNAL_LIGHT2_COLOR: 0x6666ff,
+    INTERNAL_LIGHT2_INTENSITY: 0.3,
+    INTERNAL_LIGHT2_DISTANCE: 80
+  }
+};
+
 export default class VTKLoader {
   /**
    * Initialize VTK Loader
@@ -20,7 +131,6 @@ export default class VTKLoader {
     this.currentVTKMesh = null;
     this.wireframeMesh = null;
     this.lightingInitialized = false;
-    this.performanceMode = 'high'; // Default performance mode
   }
 
   /**
@@ -34,7 +144,7 @@ export default class VTKLoader {
    * @param {number} options.pointSize - Point size for point cloud (auto-calculated if not provided)
    * @param {number} options.modelSize - Target model size in units (default: 420)
    * @param {boolean} options.enableWireframe - Enable wireframe overlay (default: true)
-   * @param {boolean} options.useCylinderGeometry - Use cylinder geometry with radius data (default: false)
+   * @param {boolean} options.useCylinderGeometry - Use cylinder geometry with radius data (default: true)
    * @param {number} options.cylinderSegments - Number of radial segments for cylinders (default: 8)
    * @param {Function} options.onProgress - Progress callback function
    * @param {Function} options.onComplete - Completion callback function
@@ -44,15 +154,15 @@ export default class VTKLoader {
     // Set default options with auto-scaling based on model size
     const modelSize = options.modelSize || 420; // Default target size
     const config = {
-      displayName: 'VTK Model',
-      color: 0xff2222,
-      opacity: 0.9,
+      displayName: 'placental model',
+      color: COLOR_CONSTANTS.DEFAULT_COLOR,
+      opacity: COLOR_CONSTANTS.DEFAULT_OPACITY,
       modelSize: modelSize,
       // Auto-calculate line width and point size based on model size if not provided
       lineWidth: options.lineWidth || Math.max(2, Math.round(modelSize / 70)), // Scale: 420→6, 280→4, 140→2
       pointSize: options.pointSize || Math.max(8, Math.round(modelSize / 17)), // Scale: 420→25, 280→16, 140→8
       enableWireframe: true,
-      useCylinderGeometry: false, // New option for cylinder rendering
+      useCylinderGeometry: true, 
       cylinderSegments: 8, // Number of radial segments for cylinders
       onProgress: null,
       onComplete: null,
@@ -126,7 +236,7 @@ export default class VTKLoader {
    * @param {boolean} useCylinderGeometry - Whether to create cylinder geometry
    * @returns {Object} - {geometry: THREE.BufferGeometry, isPointCloud: boolean, radiusData: Array, pressureData: Array}
    */
-  parseVTKData(vtkData, onProgress = null, modelSize, useCylinderGeometry = false) {
+  parseVTKData(vtkData, onProgress = null, modelSize, useCylinderGeometry = true) {
     
     if (onProgress) {
       onProgress("Parsing VTK data structure...", 40);
@@ -137,14 +247,12 @@ export default class VTKLoader {
     const vertices = [];        // Final array of vertex coordinates for Three.js
     let isReadingPoints = false; // Flag: currently reading point coordinates
     let isReadingCells = false;  // Flag: currently reading cell connectivity
-    let isReadingScalars = false; // Flag: currently reading scalar data
     let isReadingRadius = false;  // Flag: currently reading radius scalar data
     let isReadingPressure = false; // Flag: currently reading pressure scalar data
     let points = [];            // Temporary storage for all point coordinates
     let radiusData = [];        // Array to store radius values for each point
     let pressureData = [];      // Array to store pressure values for each point
     let pointCount = 0;         // Total number of points in file
-    let cellCount = 0;
     let cellConnections = [];   // Store cell connectivity information
 
     // Process each line of the VTK file
@@ -163,7 +271,6 @@ export default class VTKLoader {
         pointCount = parseInt(parts[1]); // Extract number of points
         isReadingPoints = true;
         isReadingCells = false;
-        isReadingScalars = false;
         isReadingRadius = false;
         isReadingPressure = false;
         continue;
@@ -171,13 +278,8 @@ export default class VTKLoader {
       
       // Detect CELLS/POLYGONS/LINES section - contains connectivity information
       if (line.startsWith('CELLS') || line.startsWith('POLYGONS') || line.startsWith('LINES')) {
-        const parts = line.split(' ');
-        if (parts.length > 1) {
-          cellCount = parseInt(parts[1]); // Extract number of cells
-        }
         isReadingPoints = false;
         isReadingCells = true;
-        isReadingScalars = false;
         isReadingRadius = false;
         isReadingPressure = false;
         continue;
@@ -187,7 +289,6 @@ export default class VTKLoader {
       if (line.startsWith('POINT_DATA')) {
         isReadingPoints = false;
         isReadingCells = false;
-        isReadingScalars = true;
         isReadingRadius = false;
         isReadingPressure = false;
         continue;
@@ -283,6 +384,7 @@ export default class VTKLoader {
       // Stop reading cells if we encounter other sections
       if (line.startsWith('CELL_TYPES') || line.startsWith('POINT_DATA')) {
         isReadingCells = false;
+        
       }
     }
 
@@ -386,8 +488,8 @@ export default class VTKLoader {
           );
           
           // Get radius values
-          let radius1 = radiusData[idx1] || 0.1;
-          let radius2 = radiusData[idx2] || 0.1;
+          let radius1 = radiusData[idx1] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
+          let radius2 = radiusData[idx2] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
           
           // Get pressure values and map to colors
           let pressure1 = pressureData[idx1] || 0;
@@ -453,67 +555,35 @@ export default class VTKLoader {
   pressureToColor(pressure, minPressure, maxPressure) {
     // Normalize and apply non-linear mapping
     const linear = maxPressure > minPressure ? 
-      (pressure - minPressure) / (maxPressure - minPressure) : 0.5;
-    const t = Math.pow(linear, 0.4); // Non-linear for more red colors
+      (pressure - minPressure) / (maxPressure - minPressure) : COLOR_CONSTANTS.COLOR_MAPPING.NEUTRAL_VALUE;
+    const t = Math.pow(linear, COLOR_CONSTANTS.COLOR_MAPPING.NONLINEAR_EXPONENT);
     
     const color = new this.THREE.Color();
     
-    if (t < 0.5) {
+    if (t < COLOR_CONSTANTS.COLOR_MAPPING.NEUTRAL_VALUE) {
       // Green to Orange (low to medium pressure)
       const factor = t * 2; // 0 to 1
+      const lowToMid = COLOR_CONSTANTS.COLOR_MAPPING.LOW_TO_MID;
       color.setRGB(
-        0.23 + factor * 0.75,  // 0.23 → 0.98 (green to orange red)
-        0.70 + factor * 0.23,  // 0.70 → 0.93 (green to orange green)  
-        0.27 - factor * 0.27   // 0.27 → 0.00 (green to orange blue)
+        lowToMid.RED_START + factor * lowToMid.RED_RANGE,
+        lowToMid.GREEN_START + factor * lowToMid.GREEN_RANGE,
+        lowToMid.BLUE_START + factor * lowToMid.BLUE_RANGE
       );
     } else {
       // Orange to Dark Red (medium to high pressure)
-      const factor = (t - 0.5) * 2; // 0 to 1
+      const factor = (t - COLOR_CONSTANTS.COLOR_MAPPING.NEUTRAL_VALUE) * 2; // 0 to 1
+      const midToHigh = COLOR_CONSTANTS.COLOR_MAPPING.MID_TO_HIGH;
       color.setRGB(
-        0.98 - factor * 0.42,  // 0.98 → 0.56 (orange to dark red)
-        0.93 - factor * 0.81,  // 0.93 → 0.12 (orange to dark red)
-        0.00                   // Keep blue at 0
+        midToHigh.RED_START + factor * midToHigh.RED_RANGE,
+        midToHigh.GREEN_START + factor * midToHigh.GREEN_RANGE,
+        midToHigh.BLUE_CONSTANT
       );
     }
     
     return color;
   }
 
-  /**
-   * Get simplified pressure color mapping information for UI display
-   * @param {number} minPressure - Minimum pressure in dataset
-   * @param {number} maxPressure - Maximum pressure in dataset
-   * @returns {Object} - Color mapping info with samples
-   */
-  getPressureColorMapping(minPressure, maxPressure) {
-    const samples = [];
-    const numSamples = 15; // Fewer samples for simpler display
-    
-    for (let i = 0; i < numSamples; i++) {
-      const t = i / (numSamples - 1);
-      const pressure = minPressure + (maxPressure - minPressure) * t;
-      const color = this.pressureToColor(pressure, minPressure, maxPressure);
-      
-      samples.push({
-        pressure: pressure,
-        normalizedValue: t,
-        color: `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`
-      });
-    }
-    
-    return {
-      minPressure,
-      maxPressure,
-      samples,
-      description: 'Pressure Color Scale',
-      colorStops: [
-        { color: '#3BB245', label: 'Low', position: 0 },
-        { color: '#FA8722', label: 'Medium', position: 0.5 },
-        { color: '#8E202A', label: 'High', position: 1 }
-      ]
-    };
-  }
-
+ 
   /**
    * Create a tapered cylinder between two points with different radii and colors
    * @param {THREE.Vector3} p1 - Start point
@@ -533,7 +603,6 @@ export default class VTKLoader {
     
     // Calculate cylinder direction and perpendicular vectors
     const direction = new this.THREE.Vector3().subVectors(p2, p1).normalize();
-    const length = p1.distanceTo(p2);
     
     // Create perpendicular vectors for cylinder cross-section
     const up = new this.THREE.Vector3(0, 1, 0);
@@ -670,7 +739,7 @@ export default class VTKLoader {
    * @param {THREE.Object3D} mesh - Mesh to add
    * @param {Object} config - Configuration options
    */
-  addToScene(mesh, config) {
+  addToScene(mesh) {
     // Clear existing meshes
     if (this.currentVTKMesh) {
       this.scene.remove(this.currentVTKMesh);
@@ -701,32 +770,42 @@ export default class VTKLoader {
       return;
     }
     
+    const lighting = COLOR_CONSTANTS.LIGHTING;
+    
     // Warm ambient light to simulate biological environment
-    const ambientLight = new this.THREE.AmbientLight(0x664444, 0.6);
+    const ambientLight = new this.THREE.AmbientLight(lighting.AMBIENT_COLOR, lighting.AMBIENT_INTENSITY);
     this.scene.add(ambientLight);
     
     // Main directional light (simulating medical examination light)
-    const mainLight = new this.THREE.DirectionalLight(0xffffff, 0.8);
+    const mainLight = new this.THREE.DirectionalLight(lighting.MAIN_LIGHT_COLOR, lighting.MAIN_LIGHT_INTENSITY);
     mainLight.position.set(10, 10, 5);
     mainLight.castShadow = true;
     this.scene.add(mainLight);
     
     // Secondary light from different angle for better depth perception
-    const fillLight = new this.THREE.DirectionalLight(0xffeedd, 0.4);
+    const fillLight = new this.THREE.DirectionalLight(lighting.FILL_LIGHT_COLOR, lighting.FILL_LIGHT_INTENSITY);
     fillLight.position.set(-5, 3, -1);
     this.scene.add(fillLight);
     
     // Rim light for edge definition
-    const rimLight = new this.THREE.DirectionalLight(0xaaffff, 0.3);
+    const rimLight = new this.THREE.DirectionalLight(lighting.RIM_LIGHT_COLOR, lighting.RIM_LIGHT_INTENSITY);
     rimLight.position.set(0, -5, 10);
     this.scene.add(rimLight);
     
     // Add subtle point lights for internal illumination effect
-    const internalLight1 = new this.THREE.PointLight(0xff6666, 0.5, 100);
+    const internalLight1 = new this.THREE.PointLight(
+      lighting.INTERNAL_LIGHT1_COLOR, 
+      lighting.INTERNAL_LIGHT1_INTENSITY, 
+      lighting.INTERNAL_LIGHT1_DISTANCE
+    );
     internalLight1.position.set(0, 0, 0);
     this.scene.add(internalLight1);
     
-    const internalLight2 = new this.THREE.PointLight(0x6666ff, 0.3, 80);
+    const internalLight2 = new this.THREE.PointLight(
+      lighting.INTERNAL_LIGHT2_COLOR, 
+      lighting.INTERNAL_LIGHT2_INTENSITY, 
+      lighting.INTERNAL_LIGHT2_DISTANCE
+    );
     internalLight2.position.set(20, -10, 15);
     this.scene.add(internalLight2);
     
@@ -742,9 +821,9 @@ export default class VTKLoader {
    */
   setCameraPosition(cameraConfig) {
     const config = {
-      position: [115, 80, 115], // Adjusted for 420-unit model
-      target: [0, 0, 0],
-      up: [0, 1, 0],
+      position: [...CAMERA_CONSTANTS.DEFAULT_POSITION],
+      target: [...CAMERA_CONSTANTS.DEFAULT_TARGET],
+      up: [...CAMERA_CONSTANTS.DEFAULT_UP],
       ...cameraConfig
     };
 
@@ -756,9 +835,11 @@ export default class VTKLoader {
     
     // Check if position and target are too close (would cause division by zero)
     const distance = position.distanceTo(target);
-    if (distance < 0.1) {
+    if (distance < CAMERA_CONSTANTS.MIN_CAMERA_DISTANCE) {
       console.warn("[VTKLoader] Camera position too close to target, adjusting...");
-      config.position = [60, 40, 60]; // Reset to safe default
+      config.position = [...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION];
+      config.target = [...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET];
+      config.up = [...CAMERA_CONSTANTS.SAFE_FALLBACK_UP];
     }
     
     // Since we're using copper3d, we need to work with their camera system
@@ -781,10 +862,10 @@ export default class VTKLoader {
         
       } catch (error) {
         console.error("[VTKLoader] Error setting camera position:", error);
-        // Fallback to safe position
-        camera.position.set(60, 40, 60);
-        camera.lookAt(new this.THREE.Vector3(0, 0, 0));
-        camera.up.set(0, 1, 0);
+        // Fallback to safe position using global constants
+        camera.position.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION);
+        camera.lookAt(new this.THREE.Vector3(...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET));
+        camera.up.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_UP);
       }
     } else {
       console.warn("[VTKLoader] Camera not accessible through current scene setup");
@@ -796,54 +877,10 @@ export default class VTKLoader {
    * @param {string} viewName - Name of predefined view
    */
   setPredefinedView(viewName) {
-    const views = {
-      // Front view - good for overall structure (optimized for larger model)
-      front: {
-        position: [0, 0, 180],
-        target: [0, 0, 0],
-        up: [0, 1, 0]
-      },
-      
-      // Top view - good for branching patterns (optimized for larger model)
-      top: {
-        position: [0, 180, 0],
-        target: [0, 0, 0],
-        up: [0, 0, -1]
-      },
-      
-      // Side view - good for depth perception (optimized for larger model)
-      side: {
-        position: [180, 0, 0],
-        target: [0, 0, 0],
-        up: [0, 1, 0]
-      },
-      
-      // Isometric view - good for 3D understanding (optimized for 420-unit model)
-      isometric: {
-        position: [140, 105, 140],
-        target: [0, 0, 0],
-        up: [0, 1, 0]
-      },
-      
-      // Close-up view - good for detail inspection (closer for larger model)
-      closeup: {
-        position: [80, 60, 80],
-        target: [0, 0, 0],
-        up: [0, 1, 0]
-      },
-      
-      // Wide view - full overview of larger model
-      wide: {
-        position: [250, 180, 250],
-        target: [0, 0, 0],
-        up: [0, 1, 0]
-      }
-    };
-
-    if (views[viewName]) {
-      this.setCameraPosition(views[viewName]);
+    if (CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]) {
+      this.setCameraPosition(CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]);
     } else {
-      console.warn(`[VTKLoader] Unknown view: ${viewName}`);
+      console.warn(`[VTKLoader] Unknown view: ${viewName}. Available views: ${Object.keys(CAMERA_CONSTANTS.PREDEFINED_VIEWS).join(', ')}`);
     }
   }
 
@@ -861,7 +898,11 @@ export default class VTKLoader {
    */
   getOptimalCameraPosition() {
     if (!this.currentVTKMesh || !this.currentVTKMesh.geometry) {
-      return { position: [140, 105, 140], target: [0, 0, 0], up: [0, 1, 0] }; // Adjusted for 420-unit model
+      return { 
+        position: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.position], 
+        target: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.target], 
+        up: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.up] 
+      };
     }
 
     // Calculate bounding box
@@ -872,37 +913,20 @@ export default class VTKLoader {
     
     // Calculate optimal distance based on model size (balanced for 420-unit model)
     const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 0.9; // 0.9x the largest dimension (adjusted for 420-unit scaling)
+    const distance = maxDim * CAMERA_CONSTANTS.CAMERA_DISTANCE_SCALE;
     
     return {
       position: [
-        center.x + distance * 0.7,
-        center.y + distance * 0.5, 
-        center.z + distance * 0.7
+        center.x + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.X_FACTOR,
+        center.y + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Y_FACTOR, 
+        center.z + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Z_FACTOR
       ],
       target: [center.x, center.y, center.z],
-      up: [0, 1, 0]
+      up: [...CAMERA_CONSTANTS.DEFAULT_UP]
     };
   }
 
-  /**
-   * Set performance mode for rendering
-   * @param {string} mode - Performance mode: 'high', 'medium', 'low', 'auto'
-   */
-  setPerformanceMode(mode) {
-    this.performanceMode = mode;
-    
-    // Future implementation: adjust rendering quality based on performance mode
-    // This could affect cylinder segments, line width, point size, etc.
-  }
 
-  /**
-   * Get current performance mode
-   * @returns {string} - Current performance mode
-   */
-  getPerformanceMode() {
-    return this.performanceMode || 'high';
-  }
 
   /**
    * Clean up resources

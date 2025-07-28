@@ -13,13 +13,6 @@ git clone https://github.com/ABI-CTT-Group/web-app-template.git
 cd web-app-template
 ```
 
-- Setup backend
-    - environemnt: python 3.9+
-```sh
-cd backend
-pip install -r requirements.txt
-uvicorn myapp:custom_app_instance --reload
-```
 
 - Setup frontend
     - Environment: node 16.14.0/16.16.0, yarn 1.22.19

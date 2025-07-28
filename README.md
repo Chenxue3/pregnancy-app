@@ -9,8 +9,8 @@
 - Clone template to PC
 
 ```sh
-git clone https://github.com/ABI-CTT-Group/web-app-template.git
-cd web-app-template
+git clone https://github.com/VirtualPregnancy/pregnancy-app.git
+cd pregnancy-app
 ```
 
 
@@ -35,21 +35,14 @@ yarn
 yarn dev
 ```
 
-### Without backend
 
-- delete backend folder
-- modify code in frontend
-
-```sh
-# delete components/model/Model.vue async fetch() line 17 ~ 27
-```
 
 - put your data into static folder, then you can the data file path into your frontend code directly.
 
 
 
-[readthedocs]: https://img.shields.io/readthedocs/web-app-template
-[readthedocs-url]: https://web-app-template.readthedocs.io/en/latest/
+[readthedocs]: https://app.readthedocs.org/projects/pregnancy-app/builds/28996834/
+[readthedocs-url]: https://pregnancy-app.readthedocs.io/en/latest/pregnancy_app/index.html
 
 ### Work with docs
 

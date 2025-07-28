@@ -7,9 +7,9 @@ All 3D model files are stored in the `/static/model/` directory, for example:
 ```
 static/
 └── model/
-    ├── healthy_gen_np3ns1_flux_250_arterial_tree.vtk  # Arterial vessel tree
-    ├── healthy_gen_np3ns1_flux_250_venous_tree.vtk    # Venous vessel tree
-    └── healthy_gen_np3ns1_flux_250_term.vtk           # Complete placental model
+    ├── healthy_gen_np3ns1_flux_250_arterial_tree.vtk  
+    ├── healthy_gen_np3ns1_flux_250_venous_tree.vtk    
+    └── healthy_gen_np3ns1_flux_250_term.vtk           
 ```
 
 

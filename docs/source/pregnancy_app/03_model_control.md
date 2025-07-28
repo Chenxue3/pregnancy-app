@@ -20,7 +20,7 @@ Click the arrow below to open the dropdown menu where users can select their cur
 - The "Status" section at the bottom will display a brief description of their condition.
 **Note: Currently this section only shows the selection functionality and has not yet been integrated with the model for interaction.**
 
-![Pregnancy Conditions](images/pregnancy_conditions.png)
+![Pregnancy Conditions](images/condition.png)
 
 
 ## 4. Waveform 

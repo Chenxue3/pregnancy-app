@@ -15,10 +15,10 @@ static/
 
 
 ## Loading the model
-For overall 3D model loading, please refer to the [display model](../implementation_structure/09_display_model.rst). In this document, we will focus on the VTKLoader and how to load the VTK models.
+For overall 3D model loading, please refer to the [display model](../implementation_structure/09_display_model.html). In this document, we will focus on the VTKLoader and how to load the VTK models.
 
 ### Initialization the VTKLoader
-1. Create the scene, for more details, please refer to the [three.js scene](https://threejs.org/docs/#manual/en/introduction/Creating-a-scene)
+#### 1. Create the scene, for more details, please refer to the [three.js scene](https://threejs.org/docs/#manual/en/introduction/Creating-a-scene)
 ```js
 this.scene = this.baseRenderer.getSceneByName('placental-scene');
   if (this.scene === undefined) {
@@ -26,43 +26,21 @@ this.scene = this.baseRenderer.getSceneByName('placental-scene');
     this.baseRenderer.setCurrentScene(this.scene);
   }
 ```
-2. Initialize the VTKLoader, add the scene to the VTKLoader
+#### 2. Initialize the VTKLoader, add the scene to the VTKLoader
 ```js
 this.vtkLoader = new VTKLoader(this.THREE, this.scene.scene);
 ```
-3. Initialize the Copper3D scene, which is used to control the camera
+#### 3. Initialize the Copper3D scene, which is used to control the camera
 ```js
 this.vtkLoader.setCopperScene(this.scene);
 ```
 Camera positions and orientations are stored in `/static/modelView/`:
 
-```
-static/
-└── modelView/
-    ├── noInfarct_view.json          # Standard placental view
-    ├── arrythmiaActivity_view.json  # Alternative cardiac view
-    └── noInfarct_view_setmodel.json # Model-specific view settings
-```
 
-**Example camera configuration** (`noInfarct_view.json`):
 
-```json
-{
-  "farPlane": 1000,
-  "targetPosition": [0, 0, 0],
-  "nearPlane": 0.01,
-  "upVector": [0, -1, 0],
-  "eyePosition": [0, 0, -600]
-}
-```
-
-4. For better user experience, we can set performance mode to `high` or `medium` to improve the loading speed.
-```js
-this.vtkLoader.setPerformanceMode(this.currentPerformanceMode);
-```
 
 ### Call the VTKLoader to load the model
-1. In the `frontend/components/model/Model.vue` file, we can call the `loadVTKFile` function to load the model.
+In the `frontend/components/model/Model.vue` file, we can call the `loadVTKFile` function to load the model.
 ```js
 this.vtkLoader.loadVTKFile(vtkPath, {
   displayName: 'Custom Model Name', // the name of the model

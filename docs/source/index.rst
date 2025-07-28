@@ -11,9 +11,9 @@ Web App Template's documentation
    :caption: Contents:
 
    introduction/index
+   pregnancy_app/index
    technology/index
    implementation_structure/index
-   model/index
    Build&Deploy/index
    important_note/index
    FAQs/index

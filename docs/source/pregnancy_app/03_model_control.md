@@ -15,9 +15,10 @@ Under the model, there is a pressure scale, which is used to show the color mapp
 
 ## 3. Condition Control
 
-Click the arrow below to open the dropdown menu where users can select their current pregnancy condition. After making a selection, click "Visualize Changes" to see the relationship between their condition and placental changes (or to see if there are no changes).
-- Click "Normal Placenta" to return the model to its original state, allowing users to compare their condition with a standard placenta.
-- The "Status" section at the bottom will display a brief description of their condition.
+Click the arrow below to open the dropdown menu where users can select their current pregnancy condition. 
+After making a selection, click "Visualize Changes" to see the relationship between their condition and placental changes (or to see if there are no changes).
+Click "Normal Placenta" to return the model to its original state, allowing users to compare their condition with a standard placenta.
+The "Status" section at the bottom will display a brief description of their condition.
 **Note: Currently this section only shows the selection functionality and has not yet been integrated with the model for interaction.**
 
 ![Pregnancy Conditions](images/condition.png)

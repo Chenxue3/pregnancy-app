@@ -3,7 +3,7 @@
 **Location**: `frontend/components/navigation/LeftPane.vue`
 **Purpose**: `LeftPanel` is the functional panel on the left side of the main application interface. It dynamically displays different content and interactive tools based on the current route.
 **Definition**: The tabs and the content are defined in the `frontend/assets/data` file.
-![Left Panel Tabs](images/nav_bar.png)
+<img src="images/nav_bar.png" alt="drawing" style="height: 200px;"/>
 
 ## Main Features
 

@@ -1,7 +1,7 @@
 <template>
   <div class="waveform-container">
-    <div ref="chart" style="width: 100%; height: 100px"></div>
-    <div> {{chartTitle}}</div>
+    <div ref="chart" class="waveform-chart"></div>
+    <div class="waveform-title">{{chartTitle}}</div>
   </div>
 </template>
 
@@ -26,6 +26,15 @@ export default {
     } else {
       console.log('[Waveform] No valid waveform data provided');
     }
+    
+    // Add resize listener for responsive behavior
+    this.resizeObserver = new ResizeObserver(() => {
+      this.resizeChart();
+    });
+    this.resizeObserver.observe(this.$refs.chart);
+    
+    // Window resize fallback
+    window.addEventListener('resize', this.resizeChart);
   },
   watch: {
     waveform: {
@@ -191,6 +200,62 @@ export default {
   },
   beforeDestroy() {
     if (this.playheadTimer) clearInterval(this.playheadTimer);
+    
+    // Clean up resize observers
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
+    window.removeEventListener('resize', this.resizeChart);
+    
+    // Dispose chart
+    if (this.chart) {
+      this.chart.dispose();
+    }
   },
 };
 </script>
+
+<style scoped lang="scss">
+.waveform-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.waveform-chart {
+  width: 100%;
+  flex: 1;
+  min-height: 100px;
+  max-height: 200px;
+  
+  // Responsive height based on screen size
+  @media (min-width: 1200px) {
+    min-height: 120px;
+    max-height: 250px;
+  }
+  
+  @media (min-width: 1600px) {
+    min-height: 140px;
+    max-height: 300px;
+  }
+  
+  @media (min-width: 2000px) {
+    min-height: 160px;
+    max-height: 350px;
+  }
+}
+
+.waveform-title {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin-top: 8px;
+  padding: 0 5px;
+  
+  @media (min-width: 1200px) {
+    font-size: 13px;
+    margin-top: 10px;
+  }
+}
+</style>

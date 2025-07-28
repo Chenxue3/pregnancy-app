@@ -24,13 +24,16 @@
    - **Cares**: Post-birth care requirements
 
 3. **Ultrasound - The Home Page** 
-   - Understanding ultrasound scan results. When user click the "Ultrasound" tab / or access the home page, the left panel will display the ultrasound related information. When user scroll down, there will be 4 cards, including "What is an ultrasound?", "Ultrasound waveforms", "Detecting Pregnancy Concerns" and a interactive tool for ultrasound waveform. By clicking the  card, user can access the corresponding page with more detailed information. 
+   - Understanding ultrasound scan results. When user click the "Ultrasound" tab / or access the home page, the left panel will display the ultrasound related information. 
   
-4. **Clinical Care** 
+   - When user scroll down, there will be 4 cards, including "What is an ultrasound?" (for example, as shown in the image below), "Ultrasound waveforms", "Detecting Pregnancy Concerns" and a interactive tool for ultrasound waveform. By clicking the  card, user can access the corresponding page with more detailed information. 
+  <img src="images/what_ultrasound.png" alt="What is an ultrasound?" style="height: 200px;"/>
+  
+1. **Clinical Care** 
    - **Midwife Lead Care**: Midwife-led care pathways
    - **When Care Changes**: How care pathways may change during pregnancy
 
-5. **Support** 
+2. **Support** 
    - Access to comprehensive support services and resources
 
 

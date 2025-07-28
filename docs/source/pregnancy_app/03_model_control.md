@@ -1,6 +1,6 @@
 # How to control the model
 At the right side of the app, there is a panel controls, click the arrow button to open the panel.
-<img src="images/control_panel.png" alt="drawing" style="height: 200px;"/>
+[control panel](images/control_panel.png)
 
 ## 1. Vessel Models
 
@@ -20,7 +20,7 @@ After making a selection, click "Visualize Changes" to see the relationship betw
 Click "Normal Placenta" to return the model to its original state, allowing users to compare their condition with a standard placenta.
 The "Status" section at the bottom will display a brief description of their condition.
 **Note: Currently this section only shows the selection functionality and has not yet been integrated with the model for interaction.**
-<img src="images/condition.png" alt="drawing" style="height: 200px;"/>
+[condition](images/condition.png)
 
 
 ## 4. Waveform 

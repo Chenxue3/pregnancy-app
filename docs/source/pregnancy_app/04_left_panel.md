@@ -3,7 +3,7 @@
 **Location**: `frontend/components/navigation/LeftPane.vue`
 **Purpose**: `LeftPanel` is the functional panel on the left side of the main application interface. It dynamically displays different content and interactive tools based on the current route.
 **Definition**: The tabs and the content are defined in the `frontend/assets/data` file.
-<img src="images/nav_bar.png" alt="drawing" style="height: 200px;"/>
+[navigation bar](images/nav_bar.png)
 
 ## Main Features
 
@@ -27,7 +27,7 @@
    - Understanding ultrasound scan results. When user click the "Ultrasound" tab / or access the home page, the left panel will display the ultrasound related information. 
   
    - When user scroll down, there will be 4 cards, including "What is an ultrasound?" (for example, as shown in the image below), "Ultrasound waveforms", "Detecting Pregnancy Concerns" and a interactive tool for ultrasound waveform. By clicking the  card, user can access the corresponding page with more detailed information. 
-  <img src="images/what_ultrasound.png" alt="What is an ultrasound?" style="height: 200px;"/>
+  [What is an ultrasound?](images/what_ultrasound.png)
   
 1. **Clinical Care** 
    - **Midwife Lead Care**: Midwife-led care pathways

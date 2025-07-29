@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/pregnancy-changes", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Body Change",heading:"Changes To Your Body",icon:"mdi-sine-wave",dataFile:"preganancy-changes",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"pregnancy",heading:"What is Happening in Pregnancy?",title:"Pregnancy"}}]]});

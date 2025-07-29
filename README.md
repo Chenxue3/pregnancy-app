@@ -1,6 +1,6 @@
 # Web App Template
 
-[![Read the Docs][readthedocs]][readthedocs-url]
+[Read the docs](https://pregnancy-app.readthedocs.io/en/latest/pregnancy_app/index.html)
 
 ## Setup Project
 

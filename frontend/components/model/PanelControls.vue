@@ -52,16 +52,7 @@
 
       <br />
 
-      <!-- Model Information -->
-      <div class="control-section">
-        <h4 class="control-title">Model Info</h4>
-        <div class="status-info">
-          <div class="status-row">
-            <span class="status-label">Current:</span>
-            <span class="status-value">{{ modelName }}</span>
-          </div>
-        </div>
-      </div>
+      
     </div>
   </div>
 </template>
@@ -79,10 +70,7 @@ export default {
       type: String,
       default: 'high'
     },
-    modelName: {
-      type: String,
-      default: 'Loading...'
-    },
+
     renderingType: {
       type: String,
       default: '3D Cylinders'
@@ -105,18 +93,7 @@ export default {
     };
   },
 
-  computed: {
-    displayModelName() {
-      // Simplify the model name for display
-      if (this.modelName.includes('Arterial')) {
-        return 'Arterial Tree';
-      } else if (this.modelName.includes('Venous')) {
-        return 'Venous Tree';
-      }
-      return this.modelName;
-    }
-  },
-
+ 
  
 
 
@@ -155,6 +132,7 @@ export default {
 </script>
 
 <style scoped lang="scss">
+
 .control-panel {
   position: relative;
   width: 100%;

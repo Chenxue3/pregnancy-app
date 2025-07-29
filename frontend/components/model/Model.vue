@@ -1,6 +1,7 @@
 <template>
   <div class="model">
     <!-- Only render in client-side to avoid SSR mismatch -->
+     <header class="model-info">{{modelName}}</header>
     <client-only>
       <!-- 3D model container div, responsive sizing based on screen size -->
       <div
@@ -374,7 +375,7 @@ export default {
     },
 
     /**
-     * Load venous tree using VTKLoader utility with 3D cylinders by default
+     * Load venous tree 
      */
     async loadVenousTree() {
       const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk');
@@ -456,6 +457,15 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.model-info{
+  font-size: 1.2em;
+  left:50%;
+  transform: translateX(-50%);
+  top:1%;
+  position: absolute;
+  color: #fff;
+  z-index: 1000;
+}
 .model {
   position: relative;
   width: 100%;
@@ -472,7 +482,7 @@ export default {
   height: 100vw;
 }
 
-// Model controls moved to PanelControls component
+
 
 // Loading placeholder styles
 .loading-placeholder {

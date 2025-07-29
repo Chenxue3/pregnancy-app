@@ -8,65 +8,6 @@
  * await loader.loadVTKFile('/path/to/file.vtk', options)
  */
 
-// Camera Configuration Constants
-const CAMERA_CONSTANTS = {
-  // Default camera settings
-  DEFAULT_POSITION: [115, 80, 115],
-  DEFAULT_TARGET: [0, 0, 0],
-  DEFAULT_UP: [0, 1, 0],
-  
-  // Safety fallback positions
-  SAFE_FALLBACK_POSITION: [60, 40, 60],
-  SAFE_FALLBACK_TARGET: [0, 0, 0],
-  SAFE_FALLBACK_UP: [0, 1, 0],
-  
-  // Minimum safe distance between camera and target
-  MIN_CAMERA_DISTANCE: 0.1,
-  
-  // Model size scaling factor for camera distance
-  CAMERA_DISTANCE_SCALE: 0.9,
-  
-  // Predefined view configurations
-  PREDEFINED_VIEWS: {
-    front: {
-      position: [0, 0, 180],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    top: {
-      position: [0, 180, 0],
-      target: [0, 0, 0],
-      up: [0, 0, -1]
-    },
-    side: {
-      position: [180, 0, 0],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    isometric: {
-      position: [140, 105, 140],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    closeup: {
-      position: [80, 60, 80],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    wide: {
-      position: [250, 180, 250],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    }
-  },
-  
-  // Camera positioning multipliers for optimal view calculation
-  OPTIMAL_VIEW_FACTORS: {
-    X_FACTOR: 0.7,
-    Y_FACTOR: 0.5,
-    Z_FACTOR: 0.7
-  }
-};
 
 // Color and Rendering Constants
 const COLOR_CONSTANTS = {
@@ -164,7 +105,7 @@ export default class VTKLoader {
       pointSize: options.pointSize || Math.max(8, Math.round(modelSize / 17)), // Scale: 420→25, 280→16, 140→8
       enableWireframe: true,
       useCylinderGeometry: true, 
-      cylinderSegments: 8, // Number of radial segments for cylinders
+      cylinderSegments: 10, // Number of radial segments for cylinders
       onProgress: null,
       onComplete: null,
       ...options
@@ -846,76 +787,7 @@ midToHigh.BLUE_START
     this.lightingInitialized = true;
   }
 
-  /**
-   * Set camera position and target
-   * @param {Object} cameraConfig - Camera configuration
-   * @param {Array} cameraConfig.position - Camera position [x, y, z]
-   * @param {Array} cameraConfig.target - Camera target [x, y, z]
-   * @param {Array} cameraConfig.up - Camera up vector [x, y, z]
-   */
-  setCameraPosition(cameraConfig) {
-    const config = {
-      position: [...CAMERA_CONSTANTS.DEFAULT_POSITION],
-      target: [...CAMERA_CONSTANTS.DEFAULT_TARGET],
-      up: [...CAMERA_CONSTANTS.DEFAULT_UP],
-      ...cameraConfig
-    };
 
-    // Validate camera position to prevent errors
-    const position = new this.THREE.Vector3(...config.position);
-    const target = new this.THREE.Vector3(...config.target);
-    const up = new this.THREE.Vector3(...config.up);
-    
-    // Check if position and target are too close (would cause division by zero)
-    const distance = position.distanceTo(target);
-    if (distance < CAMERA_CONSTANTS.MIN_CAMERA_DISTANCE) {
-      console.warn("[VTKLoader] Camera position too close to target, adjusting...");
-      config.position = [...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION];
-      config.target = [...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET];
-      config.up = [...CAMERA_CONSTANTS.SAFE_FALLBACK_UP];
-    }
-    
-    // Since we're using copper3d, we need to work with their camera system
-    if (this.copperScene && this.copperScene.camera) {
-      const camera = this.copperScene.camera;
-      
-      try {
-        // Set camera position
-        camera.position.set(...config.position);
-        
-        // Set camera target (what it's looking at)
-        camera.lookAt(new this.THREE.Vector3(...config.target));
-        
-        // Set up vector
-        camera.up.copy(up);
-        
-        // Update camera matrices
-        camera.updateProjectionMatrix();
-        camera.updateMatrixWorld();
-        
-      } catch (error) {
-        console.error("[VTKLoader] Error setting camera position:", error);
-        // Fallback to safe position using global constants
-        camera.position.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION);
-        camera.lookAt(new this.THREE.Vector3(...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET));
-        camera.up.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_UP);
-      }
-    } else {
-      console.warn("[VTKLoader] Camera not accessible through current scene setup");
-    }
-  }
-
-  /**
-   * Set predefined camera views optimized for placental models
-   * @param {string} viewName - Name of predefined view
-   */
-  setPredefinedView(viewName) {
-    if (CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]) {
-      this.setCameraPosition(CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]);
-    } else {
-      console.warn(`[VTKLoader] Unknown view: ${viewName}. Available views: ${Object.keys(CAMERA_CONSTANTS.PREDEFINED_VIEWS).join(', ')}`);
-    }
-  }
 
   /**
    * Set reference to copper scene for camera control
@@ -934,39 +806,6 @@ midToHigh.BLUE_START
     console.log(`[VTKLoader] Performance mode set to: ${mode}`);
   }
 
-  /**
-   * Get optimal camera position based on model bounds
-   * @returns {Object} - Optimal camera configuration
-   */
-  getOptimalCameraPosition() {
-    if (!this.currentVTKMesh || !this.currentVTKMesh.geometry) {
-      return { 
-        position: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.position], 
-        target: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.target], 
-        up: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.up] 
-      };
-    }
-
-    // Calculate bounding box
-    this.currentVTKMesh.geometry.computeBoundingBox();
-    const box = this.currentVTKMesh.geometry.boundingBox;
-    const size = box.getSize(new this.THREE.Vector3());
-    const center = box.getCenter(new this.THREE.Vector3());
-    
-    // Calculate optimal distance based on model size (balanced for 420-unit model)
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * CAMERA_CONSTANTS.CAMERA_DISTANCE_SCALE;
-    
-    return {
-      position: [
-        center.x + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.X_FACTOR,
-        center.y + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Y_FACTOR, 
-        center.z + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Z_FACTOR
-      ],
-      target: [center.x, center.y, center.z],
-      up: [...CAMERA_CONSTANTS.DEFAULT_UP]
-    };
-  }
 
 
 

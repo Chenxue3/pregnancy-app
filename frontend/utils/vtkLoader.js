@@ -8,65 +8,6 @@
  * await loader.loadVTKFile('/path/to/file.vtk', options)
  */
 
-// Camera Configuration Constants
-const CAMERA_CONSTANTS = {
-  // Default camera settings
-  DEFAULT_POSITION: [115, 80, 115],
-  DEFAULT_TARGET: [0, 0, 0],
-  DEFAULT_UP: [0, 1, 0],
-  
-  // Safety fallback positions
-  SAFE_FALLBACK_POSITION: [60, 40, 60],
-  SAFE_FALLBACK_TARGET: [0, 0, 0],
-  SAFE_FALLBACK_UP: [0, 1, 0],
-  
-  // Minimum safe distance between camera and target
-  MIN_CAMERA_DISTANCE: 0.1,
-  
-  // Model size scaling factor for camera distance
-  CAMERA_DISTANCE_SCALE: 0.9,
-  
-  // Predefined view configurations
-  PREDEFINED_VIEWS: {
-    front: {
-      position: [0, 0, 180],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    top: {
-      position: [0, 180, 0],
-      target: [0, 0, 0],
-      up: [0, 0, -1]
-    },
-    side: {
-      position: [180, 0, 0],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    isometric: {
-      position: [140, 105, 140],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    closeup: {
-      position: [80, 60, 80],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    },
-    wide: {
-      position: [250, 180, 250],
-      target: [0, 0, 0],
-      up: [0, 1, 0]
-    }
-  },
-  
-  // Camera positioning multipliers for optimal view calculation
-  OPTIMAL_VIEW_FACTORS: {
-    X_FACTOR: 0.7,
-    Y_FACTOR: 0.5,
-    Z_FACTOR: 0.7
-  }
-};
 
 // Color and Rendering Constants
 const COLOR_CONSTANTS = {
@@ -96,7 +37,7 @@ const COLOR_CONSTANTS = {
       RED_RANGE: -0.42,
       GREEN_START: 0.93,
       GREEN_RANGE: -0.81,
-      BLUE_CONSTANT: 0.00
+      BLUE_START: 0.00
     }
   },
   
@@ -131,6 +72,7 @@ export default class VTKLoader {
     this.currentVTKMesh = null;
     this.wireframeMesh = null;
     this.lightingInitialized = false;
+    this.performanceMode = 'high'; // Default performance mode
   }
 
   /**
@@ -163,7 +105,7 @@ export default class VTKLoader {
       pointSize: options.pointSize || Math.max(8, Math.round(modelSize / 17)), // Scale: 420→25, 280→16, 140→8
       enableWireframe: true,
       useCylinderGeometry: true, 
-      cylinderSegments: 8, // Number of radial segments for cylinders
+      cylinderSegments: 10, // Number of radial segments for cylinders
       onProgress: null,
       onComplete: null,
       ...options
@@ -206,7 +148,6 @@ export default class VTKLoader {
    * @returns {Promise<string>} - VTK file content as text
    */
   async fetchVTKFile(vtkFilePath, onProgress = null) {
-    
     if (onProgress) {
       onProgress("Downloading file...", 10);
     }
@@ -237,7 +178,6 @@ export default class VTKLoader {
    * @returns {Object} - {geometry: THREE.BufferGeometry, isPointCloud: boolean, radiusData: Array, pressureData: Array}
    */
   parseVTKData(vtkData, onProgress = null, modelSize, useCylinderGeometry = true) {
-    
     if (onProgress) {
       onProgress("Parsing VTK data structure...", 40);
     }
@@ -446,7 +386,6 @@ export default class VTKLoader {
    * @returns {THREE.BufferGeometry} - Combined cylinder geometry with color mapping
    */
   createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize) {
-    
     const combinedGeometry = new this.THREE.BufferGeometry();
     const vertices = [];
     const normals = [];
@@ -464,6 +403,9 @@ export default class VTKLoader {
       minPressure = Math.min(...pressureData);
       maxPressure = Math.max(...pressureData);
     }
+    
+    // First, detect branching points for smooth junction creation
+    const branchingPoints = this.detectBranchingPoints(cellConnections, points.length / 3);
     
     // Process each cell connection
     for (const connection of cellConnections) {
@@ -499,8 +441,15 @@ export default class VTKLoader {
           const color1 = this.pressureToColor(pressure1, minPressure, maxPressure);
           const color2 = this.pressureToColor(pressure2, minPressure, maxPressure);
           
-          // Create tapered cylinder segment
-          const cylinderSegment = this.createTaperedCylinder(p1, p2, radius1, radius2, radialSegments, color1, color2);
+          // Check if endpoints are branching points for seamless connection
+          const isBranchPoint1 = branchingPoints.has(idx1);
+          const isBranchPoint2 = branchingPoints.has(idx2);
+          
+          // Create tapered cylinder segment with extended ends for seamless blending
+          const cylinderSegment = this.createTaperedCylinder(
+            p1, p2, radius1, radius2, radialSegments, color1, color2,
+            isBranchPoint1, isBranchPoint2
+          );
           
           // Add vertices, normals, colors, and indices to combined geometry
           const segmentVertices = cylinderSegment.vertices;
@@ -523,6 +472,9 @@ export default class VTKLoader {
         }
       }
     }
+    
+    // Create smooth junction geometry at branching points
+    this.createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset);
     
     // Set geometry attributes
     combinedGeometry.setAttribute('position', new this.THREE.Float32BufferAttribute(vertices, 3));
@@ -576,7 +528,7 @@ export default class VTKLoader {
       color.setRGB(
         midToHigh.RED_START + factor * midToHigh.RED_RANGE,
         midToHigh.GREEN_START + factor * midToHigh.GREEN_RANGE,
-        midToHigh.BLUE_CONSTANT
+midToHigh.BLUE_START
       );
     }
     
@@ -586,6 +538,7 @@ export default class VTKLoader {
  
   /**
    * Create a tapered cylinder between two points with different radii and colors
+   * Enhanced for seamless junction blending
    * @param {THREE.Vector3} p1 - Start point
    * @param {THREE.Vector3} p2 - End point
    * @param {number} radius1 - Radius at start point
@@ -593,9 +546,11 @@ export default class VTKLoader {
    * @param {number} radialSegments - Number of radial segments
    * @param {THREE.Color} color1 - Color at start point
    * @param {THREE.Color} color2 - Color at end point
+   * @param {boolean} isBranchPoint1 - Whether start point is a branch point
+   * @param {boolean} isBranchPoint2 - Whether end point is a branch point
    * @returns {Object} - {vertices: Array, normals: Array, colors: Array, indices: Array}
    */
-  createTaperedCylinder(p1, p2, radius1, radius2, radialSegments, color1, color2) {
+  createTaperedCylinder(p1, p2, radius1, radius2, radialSegments, color1, color2, isBranchPoint1 = false, isBranchPoint2 = false) {
     const vertices = [];
     const normals = [];
     const colors = [];
@@ -603,6 +558,26 @@ export default class VTKLoader {
     
     // Calculate cylinder direction and perpendicular vectors
     const direction = new this.THREE.Vector3().subVectors(p2, p1).normalize();
+    
+    // Extend cylinder ends slightly into branch points to eliminate gaps
+    let adjustedP1 = p1.clone();
+    let adjustedP2 = p2.clone();
+    let adjustedRadius1 = radius1;
+    let adjustedRadius2 = radius2;
+    
+    if (isBranchPoint1) {
+      // Minimal extension for natural connection
+      const extension = Math.max(radius1 * 0.08, 0.005);
+      adjustedP1.add(direction.clone().multiplyScalar(-extension));
+      adjustedRadius1 = radius1 * 1.02; // Very slight radius increase
+    }
+    
+    if (isBranchPoint2) {
+      // Minimal extension for natural connection
+      const extension = Math.max(radius2 * 0.08, 0.005);
+      adjustedP2.add(direction.clone().multiplyScalar(extension));
+      adjustedRadius2 = radius2 * 1.02; // Very slight radius increase
+    }
     
     // Create perpendicular vectors for cylinder cross-section
     const up = new this.THREE.Vector3(0, 1, 0);
@@ -616,8 +591,8 @@ export default class VTKLoader {
     // Generate vertices for cylinder caps
     for (let ring = 0; ring <= 1; ring++) {
       const t = ring; // 0 for start, 1 for end
-      const currentPos = new this.THREE.Vector3().lerpVectors(p1, p2, t);
-      const currentRadius = radius1 + (radius2 - radius1) * t;
+      const currentPos = new this.THREE.Vector3().lerpVectors(adjustedP1, adjustedP2, t);
+      const currentRadius = adjustedRadius1 + (adjustedRadius2 - adjustedRadius1) * t;
       const currentColor = new this.THREE.Color().lerpColors(color1, color2, t);
       
       for (let segment = 0; segment < radialSegments; segment++) {
@@ -690,11 +665,11 @@ export default class VTKLoader {
       // Create cylinder mesh with proper material for 3D rendering
       
       // Use vertex colors if pressure data is available
-      const material = new this.THREE.MeshPhongMaterial({
+      const material = new this.THREE.MeshMatcapMaterial
+      ({
         color: pressureData && pressureData.length > 0 ? 0xffffff : config.color,
         transparent: true,
         opacity: config.opacity,
-        shininess: 30,
         vertexColors: pressureData && pressureData.length > 0 // Enable vertex colors for pressure mapping
       });
       
@@ -812,77 +787,7 @@ export default class VTKLoader {
     this.lightingInitialized = true;
   }
 
-  /**
-   * Set camera position and target
-   * @param {Object} cameraConfig - Camera configuration
-   * @param {Array} cameraConfig.position - Camera position [x, y, z]
-   * @param {Array} cameraConfig.target - Camera target [x, y, z]
-   * @param {Array} cameraConfig.up - Camera up vector [x, y, z]
-   */
-  setCameraPosition(cameraConfig) {
-    const config = {
-      position: [...CAMERA_CONSTANTS.DEFAULT_POSITION],
-      target: [...CAMERA_CONSTANTS.DEFAULT_TARGET],
-      up: [...CAMERA_CONSTANTS.DEFAULT_UP],
-      ...cameraConfig
-    };
 
-    
-    // Validate camera position to prevent errors
-    const position = new this.THREE.Vector3(...config.position);
-    const target = new this.THREE.Vector3(...config.target);
-    const up = new this.THREE.Vector3(...config.up);
-    
-    // Check if position and target are too close (would cause division by zero)
-    const distance = position.distanceTo(target);
-    if (distance < CAMERA_CONSTANTS.MIN_CAMERA_DISTANCE) {
-      console.warn("[VTKLoader] Camera position too close to target, adjusting...");
-      config.position = [...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION];
-      config.target = [...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET];
-      config.up = [...CAMERA_CONSTANTS.SAFE_FALLBACK_UP];
-    }
-    
-    // Since we're using copper3d, we need to work with their camera system
-    if (this.copperScene && this.copperScene.camera) {
-      const camera = this.copperScene.camera;
-      
-      try {
-        // Set camera position
-        camera.position.set(...config.position);
-        
-        // Set camera target (what it's looking at)
-        camera.lookAt(new this.THREE.Vector3(...config.target));
-        
-        // Set up vector
-        camera.up.copy(up);
-        
-        // Update camera matrices
-        camera.updateProjectionMatrix();
-        camera.updateMatrixWorld();
-        
-      } catch (error) {
-        console.error("[VTKLoader] Error setting camera position:", error);
-        // Fallback to safe position using global constants
-        camera.position.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_POSITION);
-        camera.lookAt(new this.THREE.Vector3(...CAMERA_CONSTANTS.SAFE_FALLBACK_TARGET));
-        camera.up.set(...CAMERA_CONSTANTS.SAFE_FALLBACK_UP);
-      }
-    } else {
-      console.warn("[VTKLoader] Camera not accessible through current scene setup");
-    }
-  }
-
-  /**
-   * Set predefined camera views optimized for placental models
-   * @param {string} viewName - Name of predefined view
-   */
-  setPredefinedView(viewName) {
-    if (CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]) {
-      this.setCameraPosition(CAMERA_CONSTANTS.PREDEFINED_VIEWS[viewName]);
-    } else {
-      console.warn(`[VTKLoader] Unknown view: ${viewName}. Available views: ${Object.keys(CAMERA_CONSTANTS.PREDEFINED_VIEWS).join(', ')}`);
-    }
-  }
 
   /**
    * Set reference to copper scene for camera control
@@ -893,40 +798,288 @@ export default class VTKLoader {
   }
 
   /**
-   * Get optimal camera position based on model bounds
-   * @returns {Object} - Optimal camera configuration
+   * Set performance mode for rendering optimization
+   * @param {string} mode - Performance mode: 'high', 'medium', 'low', 'auto'
    */
-  getOptimalCameraPosition() {
-    if (!this.currentVTKMesh || !this.currentVTKMesh.geometry) {
-      return { 
-        position: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.position], 
-        target: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.target], 
-        up: [...CAMERA_CONSTANTS.PREDEFINED_VIEWS.isometric.up] 
-      };
-    }
-
-    // Calculate bounding box
-    this.currentVTKMesh.geometry.computeBoundingBox();
-    const box = this.currentVTKMesh.geometry.boundingBox;
-    const size = box.getSize(new this.THREE.Vector3());
-    const center = box.getCenter(new this.THREE.Vector3());
-    
-    // Calculate optimal distance based on model size (balanced for 420-unit model)
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * CAMERA_CONSTANTS.CAMERA_DISTANCE_SCALE;
-    
-    return {
-      position: [
-        center.x + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.X_FACTOR,
-        center.y + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Y_FACTOR, 
-        center.z + distance * CAMERA_CONSTANTS.OPTIMAL_VIEW_FACTORS.Z_FACTOR
-      ],
-      target: [center.x, center.y, center.z],
-      up: [...CAMERA_CONSTANTS.DEFAULT_UP]
-    };
+  setPerformanceMode(mode) {
+    this.performanceMode = mode;
+    console.log(`[VTKLoader] Performance mode set to: ${mode}`);
   }
 
 
+
+
+  /**
+   * Detect branching points where multiple tubes connect
+   * @param {Array} cellConnections - Array of cell connectivity data
+   * @param {number} totalPoints - Total number of points
+   * @returns {Map} - Map of point indices to their connected points
+   */
+  detectBranchingPoints(cellConnections, totalPoints) {
+    const pointConnections = new Map();
+    
+    // Build connectivity graph
+    for (const connection of cellConnections) {
+      const cellSize = connection[0];
+      
+      for (let i = 1; i < cellSize; i++) {
+        const idx1 = connection[i];
+        const idx2 = connection[i + 1];
+        
+        if (idx2 !== undefined && idx1 < totalPoints && idx2 < totalPoints) {
+          // Add bidirectional connections
+          if (!pointConnections.has(idx1)) {
+            pointConnections.set(idx1, new Set());
+          }
+          if (!pointConnections.has(idx2)) {
+            pointConnections.set(idx2, new Set());
+          }
+          
+          pointConnections.get(idx1).add(idx2);
+          pointConnections.get(idx2).add(idx1);
+        }
+      }
+    }
+    
+    // Filter to only branching points (more than 2 connections)
+    const branchingPoints = new Map();
+    for (const [pointIdx, connections] of pointConnections) {
+      if (connections.size > 2) {
+        branchingPoints.set(pointIdx, Array.from(connections));
+      }
+    }
+    
+    return branchingPoints;
+  }
+
+  /**
+   * Create smooth junction geometry at branching points
+   * @param {Map} branchingPoints - Map of branching points and their connections
+   * @param {Array} points - Array of point coordinates
+   * @param {Array} radiusData - Array of radius values
+   * @param {Array} pressureData - Array of pressure values
+   * @param {number} minPressure - Minimum pressure for color mapping
+   * @param {number} maxPressure - Maximum pressure for color mapping
+   * @param {Array} vertices - Vertices array to append to
+   * @param {Array} normals - Normals array to append to
+   * @param {Array} colors - Colors array to append to
+   * @param {Array} indices - Indices array to append to
+   * @param {number} indexOffset - Current index offset
+   */
+  createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset) {
+    for (const [branchPointIdx, connectedPoints] of branchingPoints) {
+      // Get branch point data
+      const branchPos = new this.THREE.Vector3(
+        points[branchPointIdx * 3],
+        points[branchPointIdx * 3 + 1],
+        points[branchPointIdx * 3 + 2]
+      );
+      const branchRadius = radiusData[branchPointIdx] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
+      const branchPressure = pressureData[branchPointIdx] || 0;
+      const branchColor = this.pressureToColor(branchPressure, minPressure, maxPressure);
+      
+      // Create seamless junction geometry
+      const junctionGeometry = this.createSeamlessJunction(
+        branchPos, 
+        branchRadius, 
+        branchColor, 
+        connectedPoints, 
+        points, 
+        radiusData
+      );
+      
+      // Add junction geometry to combined mesh
+      vertices.push(...junctionGeometry.vertices);
+      normals.push(...junctionGeometry.normals);
+      colors.push(...junctionGeometry.colors);
+      
+      // Add indices with offset
+      for (const index of junctionGeometry.indices) {
+        indices.push(index + indexOffset);
+      }
+      
+      indexOffset += junctionGeometry.vertices.length / 3;
+    }
+  }
+
+  /**
+   * Create seamless junction geometry that blends naturally with tubes
+   * Uses smooth interpolation surfaces instead of spherical geometry
+   * @param {THREE.Vector3} centerPos - Center position of junction
+   * @param {number} radius - Base radius of junction
+   * @param {THREE.Color} color - Color of junction
+   * @param {Array} connectedPoints - Array of connected point indices
+   * @param {Array} points - All point coordinates
+   * @param {Array} radiusData - Radius data for all points
+   * @returns {Object} - {vertices: Array, normals: Array, colors: Array, indices: Array}
+   */
+  createSeamlessJunction(centerPos, radius, color, connectedPoints, points, radiusData) {
+    const vertices = [];
+    const normals = [];
+    const colors = [];
+    const indices = [];
+    
+    // Calculate connection directions and properties
+    const connections = [];
+    let maxConnectedRadius = radius;
+    
+    if (connectedPoints && points && radiusData) {
+      for (const pointIdx of connectedPoints) {
+        if (pointIdx * 3 + 2 < points.length) {
+          const connectedPos = new this.THREE.Vector3(
+            points[pointIdx * 3],
+            points[pointIdx * 3 + 1],
+            points[pointIdx * 3 + 2]
+          );
+          const direction = new this.THREE.Vector3().subVectors(connectedPos, centerPos).normalize();
+          const connectedRadius = radiusData[pointIdx] || radius;
+          
+          // Track the largest connected radius to ensure no gaps
+          maxConnectedRadius = Math.max(maxConnectedRadius, connectedRadius);
+          
+          connections.push({ 
+            direction, 
+            radius: connectedRadius,
+            distance: centerPos.distanceTo(connectedPos)
+          });
+        }
+      }
+    }
+    
+    // If less than 3 connections, create minimal geometry
+    if (connections.length < 3) {
+      return { vertices: [], normals: [], colors: [], indices: [] };
+    }
+    
+    // Create smooth interpolation surface with natural size
+    const resolution = 6; // Lower resolution for more natural appearance
+    // Use a smaller base radius for more natural connections
+    const baseRadius = maxConnectedRadius * 0.95; // Slightly smaller for natural look
+    
+    // Generate vertices using smooth field interpolation
+    for (let i = 0; i <= resolution; i++) {
+      const theta = (i / resolution) * Math.PI;
+      const sinTheta = Math.sin(theta);
+      const cosTheta = Math.cos(theta);
+      
+      for (let j = 0; j <= resolution; j++) {
+        const phi = (j / resolution) * Math.PI * 2;
+        const sinPhi = Math.sin(phi);
+        const cosPhi = Math.cos(phi);
+        
+        // Base spherical direction
+        const sphereDirection = new this.THREE.Vector3(
+          sinTheta * cosPhi,
+          cosTheta,
+          sinTheta * sinPhi
+        );
+        
+        // Calculate smooth radius with directional influence
+        let smoothRadius = baseRadius;
+        let totalInfluence = 0;
+        let maxDirectionalRadius = baseRadius;
+        
+        for (const conn of connections) {
+          // Calculate influence of each connection
+          const dot = Math.max(0, sphereDirection.dot(conn.direction));
+          const influence = Math.pow(dot, 3.0); // Smooth falloff, not too sharp
+          
+          // Calculate radius in this direction ensuring coverage
+          const directionalRadius = Math.max(baseRadius, conn.radius * 1.2);
+          const radiusContribution = directionalRadius * influence * 0.3;
+          
+          smoothRadius += radiusContribution;
+          totalInfluence += influence;
+          
+          // Ensure we always cover the connected tube radius
+          if (influence > 0.1) {
+            maxDirectionalRadius = Math.max(maxDirectionalRadius, conn.radius * 1.25);
+          }
+        }
+        
+        // Apply smooth scaling with minimum radius guarantee
+        const scaleFactor = 1.0 + totalInfluence * 0.2;
+        smoothRadius = Math.max(smoothRadius * scaleFactor, maxDirectionalRadius);
+        
+        // Ensure minimum radius to prevent gaps
+        smoothRadius = Math.max(smoothRadius, baseRadius * 0.9);
+        
+        // Calculate final vertex position
+        const vertexPos = new this.THREE.Vector3()
+          .copy(sphereDirection)
+          .multiplyScalar(smoothRadius)
+          .add(centerPos);
+        
+        vertices.push(vertexPos.x, vertexPos.y, vertexPos.z);
+        
+        // Calculate smooth normal
+        const normal = this.calculateSmoothNormal(vertexPos, centerPos, connections);
+        normals.push(normal.x, normal.y, normal.z);
+        
+        // Use junction color
+        colors.push(color.r, color.g, color.b);
+      }
+    }
+    
+    // Generate indices for smooth triangulation
+    for (let i = 0; i < resolution; i++) {
+      for (let j = 0; j < resolution; j++) {
+        const first = i * (resolution + 1) + j;
+        const second = first + resolution + 1;
+        
+        // Create triangles with consistent winding
+        indices.push(first, second, first + 1);
+        indices.push(second, second + 1, first + 1);
+      }
+    }
+    
+    return { vertices, normals, colors, indices };
+  }
+  
+  /**
+   * Calculate smooth normal for seamless junction surface
+   * Enhanced for ultra-smooth transitions
+   * @param {THREE.Vector3} position - Current vertex position
+   * @param {THREE.Vector3} center - Junction center
+   * @param {Array} connections - Connection data
+   * @returns {THREE.Vector3} - Smooth normal vector
+   */
+  calculateSmoothNormal(position, center, connections) {
+    const direction = new this.THREE.Vector3().subVectors(position, center).normalize();
+    
+    // Start with radial direction
+    let normal = direction.clone();
+    
+    // Calculate weighted influence from all connections
+    let totalWeight = 0;
+    const influences = [];
+    
+    for (const conn of connections) {
+      const dot = Math.max(0, direction.dot(conn.direction));
+      const influence = Math.pow(dot, 2.5); // Moderate smoothness
+      const weight = influence * conn.radius; // Weight by tube size
+      
+      influences.push({ direction: conn.direction, weight });
+      totalWeight += weight;
+    }
+    
+    // Apply weighted blending for smoother surface
+    if (totalWeight > 0) {
+      let blendedDirection = new this.THREE.Vector3();
+      
+      for (const inf of influences) {
+        const normalizedWeight = inf.weight / totalWeight;
+        blendedDirection.add(
+          inf.direction.clone().multiplyScalar(normalizedWeight * 0.12) // Gentle blending
+        );
+      }
+      
+      // Lerp between radial normal and blended direction
+      normal.add(blendedDirection);
+    }
+    
+    return normal.normalize();
+  }
 
   /**
    * Clean up resources

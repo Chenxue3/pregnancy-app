@@ -1,6 +1,7 @@
 <template>
   <div class="model">
     <!-- Only render in client-side to avoid SSR mismatch -->
+     <header class="model-info">{{modelName}}</header>
     <client-only>
       <!-- 3D model container div, responsive sizing based on screen size -->
       <div
@@ -46,8 +47,6 @@ export default {
       THREE: null,         // Three.js library instance for 3D geometry
       baseRenderer: null,  // Main renderer for managing 3D scenes
       container: null,     // DOM container for 3D canvas
-      helloworld:"",       // Placeholder for API response
-      model:null,          // Stores loaded model data
       vtkLoader: null,     // VTK loader utility instance
       _resizeHandler: null, // Store resize handler for cleanup
       clientMounted: false // Track if component is mounted on client
@@ -280,7 +279,7 @@ export default {
       const result = await this.vtkLoader.loadVTKFile(vtkPath, {
         displayName: 'Placental Arterial Tree',
         color: 0xff2222,
-        opacity: 0.9,
+        opacity:1.0,
         modelSize: 420,
         useCylinderGeometry: true, // Default to 3D cylinder rendering
         cylinderSegments: 10, // Good balance of quality and performance
@@ -317,7 +316,7 @@ export default {
       const result = await this.vtkLoader.loadVTKFile(vtkPath, {
         displayName: 'Placental Arterial Tree',
         color: 0xff3333,
-        opacity: 0.9,
+        opacity: 1,
         modelSize: 420,
         useCylinderGeometry: true, // Default to 3D cylinder rendering
         cylinderSegments: 10,
@@ -327,9 +326,6 @@ export default {
         },
         onComplete: (mesh, isPointCloud) => {
           let newModelName = 'Placental Arterial Tree';
-          
-          
-          
           
           // Emit state update to parent
           this.$emit('model-state-updated', { modelName: newModelName });
@@ -354,7 +350,7 @@ export default {
       const result = await this.vtkLoader.loadVTKFile(vtkPath, {
         displayName: 'Placental Arterial Tree (Cylinders)',
         color: 0xff2222,
-        opacity: 0.9,
+        opacity: 1,
         modelSize: 420,
         useCylinderGeometry: true, // Enable cylinder geometry with radius data
         cylinderSegments: 12, // Higher quality cylinders
@@ -365,10 +361,6 @@ export default {
         onComplete: (mesh, isPointCloud) => {
           let newModelName = 'Placental Arterial Tree';
           
-
-          
-        
-          
           // Emit state update to parent
           this.$emit('model-state-updated', { modelName: newModelName });
           
@@ -383,14 +375,14 @@ export default {
     },
 
     /**
-     * Load venous tree using VTKLoader utility with 3D cylinders by default
+     * Load venous tree 
      */
     async loadVenousTree() {
       const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk');
       const result = await this.vtkLoader.loadVTKFile(vtkPath, {
         displayName: 'Placental Venous Tree',
         color: 0x2222ff,
-        opacity: 0.8,
+        opacity: 1,
         modelSize: 420,
         useCylinderGeometry: true, // Default to 3D cylinder rendering
         cylinderSegments: 10, // Good balance of quality and performance
@@ -401,8 +393,6 @@ export default {
         onComplete: (mesh, isPointCloud) => {
           let newModelName = 'Placental Venous Tree';
           
-         
-          
           // Emit state update to parent
           this.$emit('model-state-updated', { modelName: newModelName });
           
@@ -416,55 +406,7 @@ export default {
       }
     },
 
-    /**
-     * Load venous tree with cylinder geometry using radius data
-     */
-    async loadVenousTreeWithCylinders() {
-      console.log("Loading venous tree with cylinder geometry...");
-      
-      const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk');
-      const result = await this.vtkLoader.loadVTKFile(vtkPath, {
-        displayName: 'Placental Venous Tree (Cylinders)',
-        color: 0x2222ff,
-        opacity: 0.8,
-        modelSize: 420,
-        useCylinderGeometry: true, // Enable cylinder geometry with radius data
-        cylinderSegments: 12, // Good balance between quality and performance
-        onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
-          this.$emit('model-state-updated', { modelName: progressMessage });
-        },
-        onComplete: (mesh, isPointCloud, radiusData, pressureData) => {
-          let newModelName = 'Placental Venous Tree';
-          
-          // emit state update to parent
-          this.$emit('model-state-updated', { modelName: newModelName });
-          
-          const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
-          this.scene.loadViewUrl(viewPath);
-        }
-      });
-      
-      if (!result.success) {
-        this.$emit('model-state-updated', { modelName: `Error: ${result.error.message}` });
-      }
-    },
 
-    // Legacy OBJ model loader (kept for compatibility)
-    loadModel(model_url, model_name) {
-      const viewURL = this.getAssetPath('modelView/noInfarct_view.json');
-
-      this.scene = this.baseRenderer.getSceneByName(model_name);
-      if (this.scene === undefined) {
-        this.scene = this.baseRenderer.createScene(model_name);
-        this.baseRenderer.setCurrentScene(this.scene);
-        this.scene.loadOBJ(model_url, (content) => {
-          console.log(content);
-        });
-        this.scene.loadViewUrl(viewURL);
-      }
-      this.scene.onWindowResize();
-    },
 
     // Toggle between line rendering modes (simplified for basic VTK loader)
     toggleRenderMode() {
@@ -497,7 +439,6 @@ export default {
 
   },
 
-  watch: {},
 
   beforeDestroy() {
     // Clean up VTK loader resources
@@ -516,6 +457,15 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.model-info{
+  font-size: 1.2em;
+  left:50%;
+  transform: translateX(-50%);
+  top:1%;
+  position: absolute;
+  color: #fff;
+  z-index: 1000;
+}
 .model {
   position: relative;
   width: 100%;
@@ -532,7 +482,7 @@ export default {
   height: 100vw;
 }
 
-// Model controls moved to PanelControls component
+
 
 // Loading placeholder styles
 .loading-placeholder {

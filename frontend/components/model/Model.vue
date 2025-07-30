@@ -9,6 +9,22 @@
           :class="mdAndUp ? 'baseDom-md' : 'baseDom-sm'"
           style="width: 100%; height: 100%;"
         />
+
+        <div
+        ref="threeDControls"
+        class="baseModelControl"
+        :class="mdAndUp ? 'baseModelControl-md' : 'baseModelControl-sm'"
+      >
+        <div class="baseModelCB" :class="mdAndUp ? 'baseModelCB-md' : ''">
+         
+          <img
+            src="~/assets/images/gestures-icons.png"
+            class="h-full w-full md:object-contain"
+            @click="handleGestureIconClick"
+          />
+          
+        </div>
+      </div>
       
       <!-- Fallback template for SSR -->
       <template #fallback>
@@ -436,6 +452,53 @@ export default {
       });
     },
 
+    // Handle click on gesture icons area
+    handleGestureIconClick(event) {
+      const rect = event.target.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const imageWidth = rect.width;
+      
+      // Check if click is in the first quarter (first 25% from left)
+      if (clickX <= imageWidth / 4) {
+        console.log('[Model] Reset gesture clicked - resetting model to default position');
+        this.resetModelToDefault();
+      }
+    },
+
+    // Reset model to default position, zoom, and remove any effects
+    resetModelToDefault() {
+      if (!this.scene) {
+        console.warn('[Model] Scene not available for reset');
+        return;
+      }
+
+      try {
+        // Reset camera to default view
+        const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
+        this.scene.loadViewUrl(viewPath);
+        
+        // Trigger window resize to ensure proper rendering
+        this.scene.onWindowResize();
+        
+        // Clear any zoom/pan transformations and reset to initial state 
+        if (this.vtkLoader) {
+          // Remove any overlaid data or effects
+          this.vtkLoader.clearTemporaryData();
+        }
+        
+        console.log('[Model] Model reset to default position completed');
+        
+        // Emit state update to parent
+        this.$emit('model-state-updated', { 
+          modelName: this.modelName || 'Placental Arterial Tree',
+          resetTriggered: true
+        });
+        
+      } catch (error) {
+        console.error('[Model] Error resetting model to default:', error);
+      }
+    },
+
 
   },
 
@@ -457,6 +520,35 @@ export default {
 </script>
 
 <style scoped lang="scss">
+
+.baseModelControl {
+  width: 100vw;
+  height: 120px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-content: center;
+  .baseModelCB {
+    width: 240px;
+    height: 70px;
+    position: relative;
+  }
+  .baseModelCB-md {
+    width: 280px;
+    height: 100px;
+  }
+}
+
+.baseModelControl-md {
+  position: fixed;
+  bottom: 10px;
+  padding-left: 100px;
+}
+.baseModelControl-sm {
+  order: -1; // Move to the top of the stack
+  height: 60px;
+}
+
 .model-info{
   font-size: 1.2em;
   left:50%;

@@ -10,17 +10,21 @@ At the right side of the app, there is a panel controls, click the arrow button 
 1. Vessel Models
 ---------------
 
-You can see there are two buttons:
+You can see there are three buttons:
 
 - Arterial Tree
 - Venous Tree
+- Combined Trees
 
-Click the button to load the different models. The model will be loaded in the center of the app accordingly.
+Click the button to load the different models. The model will be loaded in the center of the app accordingly, the Combined Trees is the combination of arterial and venous trees.
 
-2. Pressure Scale
+2. Color Mapping
 ----------------
 
-Under the model, there is a pressure scale, which is used to show the color mapping of the pressure.
+Under the model, there is a color mapping scale, which is used to show the color mapping of the pressure or flux.
+When click the "Pressure", the color mapping will be the pressure, when click the "Flux", the color mapping will be the flux.
+The default means that the color of the arterial vessels is red, and the color of the venous vessels is blue.
+
 
 3. Condition Control
 -------------------

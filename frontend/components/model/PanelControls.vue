@@ -39,7 +39,7 @@
             <v-icon left>mdi-heart-pulse</v-icon>
             Venous Tree
           </v-btn>
-          <v-btn @click="$emit('load-combined')" color="success" block class="mb-2">
+          <v-btn @click="$emit('load-combined')" color="success" block class="mb-2" :disabled="isLoading" :loading="isLoading">
             <v-icon left>mdi-network</v-icon>
             Combined Trees
           </v-btn>

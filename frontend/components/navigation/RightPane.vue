@@ -2,14 +2,6 @@
   <div class="responsive-container">
     <!-- Model Section -->
     <div class="model-section" :class="{ 'model-section-mobile': !mdAndUp }">
-      <!-- Loading overlay for model -->
-      <div v-if="isModelLoading" class="model-loading-overlay">
-        <div class="model-loading-content">
-          <loading-bar />
-          <p class="model-loading-text">{{ loadingMessage }}</p>
-        </div>
-      </div>
-      
       <model
         ref="modelComponent"
         :use-tube-rendering="modelStates.useTubeRendering"
@@ -23,12 +15,6 @@
     <div class="controls-section" :class="{ 'controls-section-mobile': !mdAndUp }">
       <!-- Model Controls -->
       <div class="controls-panel">
-        <!-- Loading Bar for Model Loading States -->
-        <div v-if="isModelLoading" class="loading-container mb-3">
-          <loading-bar />
-          <p class="loading-text">{{ loadingMessage }}</p>
-        </div>
-        
         <PanelControls
           :use-tube-rendering="modelStates.useTubeRendering"
           :current-performance-mode="modelStates.currentPerformanceMode"
@@ -98,7 +84,7 @@ export default {
         renderingType: "3D Cylinders", // Default to 3D cylinder rendering
         pressureColorMapping: null, // Pressure color mapping for display
         pressureMapping: true, // Track pressure mapping state
-        isLoading: true, // Track if model is currently loading
+        isLoading: false, // Track if model is currently loading - initialize to false
         loadingComplete: false, // Track if loading has completed
       },
       // TODO: get waveform data from model
@@ -112,10 +98,6 @@ export default {
       ultrasoundToolRef: null,
       lastUltrasoundMetrics: null,
       lastConditionData: null,
-      
-      // Loading state properties
-      isModelLoading: false,
-      loadingMessage: 'Loading model...',
       
       // UI state properties
       isConditionsPanelExpanded: false,
@@ -165,8 +147,11 @@ export default {
     // Handle events from PanelControls and forward to Model component
     handleReloadArterial() {
       if (this.$refs.modelComponent && this.$refs.modelComponent.loadTree) {
-        this.startLoading('Loading arterial tree model...');
-        this.$refs.modelComponent.loadTree('/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk', 'Placental Arterial Tree', 0xff2222, 1.0, 420, true, 10, this.modelStates.pressureMapping, true);
+        this.$refs.modelComponent.loadTree('arterial', {
+          color: 0xff2222,
+          displayName: 'Placental Arterial Tree',
+          pressureMapping: this.modelStates.pressureMapping
+        });
         this.modelStates.renderingType = "3D Cylinders";
       }
     },
@@ -174,8 +159,11 @@ export default {
     handleLoadVenous() {
       console.log('[RightPane] Loading venous tree model...');
       if (this.$refs.modelComponent && this.$refs.modelComponent.loadTree) {
-        this.startLoading('Loading venous tree model...');
-        this.$refs.modelComponent.loadTree('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk', 'Placental Venous Tree', 0x2222ff, 1.0, 420, true, 10, this.modelStates.pressureMapping, true);
+        this.$refs.modelComponent.loadTree('venous', {
+          color: 0x2222ff,
+          displayName: 'Placental Venous Tree',
+          pressureMapping: this.modelStates.pressureMapping
+        });
         this.modelStates.renderingType = "3D Cylinders";
       }
     },
@@ -185,7 +173,6 @@ export default {
         this.$refs.modelComponent &&
         this.$refs.modelComponent.loadArterialTreeWithCylinders
       ) {
-        this.startLoading('Loading high quality arterial model...');
         this.$refs.modelComponent.loadArterialTreeWithCylinders();
         this.modelStates.renderingType = "High Quality 3D";
       }
@@ -196,7 +183,6 @@ export default {
         this.$refs.modelComponent &&
         this.$refs.modelComponent.loadVenousTreeWithCylinders
       ) {
-        this.startLoading('Loading high quality venous model...');
         this.$refs.modelComponent.loadVenousTreeWithCylinders();
         this.modelStates.renderingType = "High Quality 3D";
       }
@@ -208,7 +194,6 @@ export default {
         this.$refs.modelComponent &&
         this.$refs.modelComponent.loadCombinedTrees
       ) {
-        this.startLoading('Loading combined vascular network...');
         this.$refs.modelComponent.loadCombinedTrees();
         this.modelStates.renderingType = "Combined Model";
       }
@@ -227,19 +212,10 @@ export default {
       // Handle loading state updates
       if (newStates.hasOwnProperty('isLoading')) {
         this.modelStates.isLoading = newStates.isLoading;
-        if (newStates.isLoading) {
-          this.startLoading(newStates.modelName || 'Loading model...');
-        }
       }
       
       if (newStates.hasOwnProperty('loadingComplete') && newStates.loadingComplete) {
         this.modelStates.loadingComplete = newStates.loadingComplete;
-        this.stopLoading();
-      }
-      
-      // Stop loading when model is ready (not showing "Loading..." in name) - fallback
-      if (newStates.modelName && !newStates.modelName.includes('Loading') && !newStates.modelName.includes('(') && !this.modelStates.loadingComplete) {
-        this.stopLoading();
       }
     },
     
@@ -387,18 +363,6 @@ export default {
       // - Highlighting specific areas affected by conditions
     },
     
-    // Loading state management methods
-    startLoading(message = 'Loading model...') {
-      this.isModelLoading = true;
-      this.loadingMessage = message;
-      console.log('[RightPane] Loading started:', message);
-    },
-    
-    stopLoading() {
-      this.isModelLoading = false;
-      console.log('[RightPane] Loading completed');
-    },
-    
     // Condition selector event handlers
     handleConditionsChanged(data) {
       console.log('[RightPane] Conditions changed:', data);
@@ -470,50 +434,6 @@ export default {
 </script>
 
 <style scoped lang="scss">
-.loading-container {
-  background: rgba(49, 54, 87, 0.9);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
-  color: #D1C7B5;
-  box-shadow: 0 4px 20px rgba(31, 102, 131, 0.3);
-  border: 2px solid #1F6683;
-  
-  .loading-text {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #D1C7B5;
-    font-weight: 500;
-  }
-}
-
-.model-loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(49, 54, 87, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-  border-radius: 8px;
-  border: 2px solid #1F6683;
-  
-  .model-loading-content {
-    text-align: center;
-    color: #D1C7B5;
-    
-    .model-loading-text {
-      margin-top: 16px;
-      font-size: 14px;
-      color: #D1C7B5;
-      font-weight: 500;
-    }
-  }
-}
-
 // Responsive Container
 .responsive-container {
   width: 100vw;

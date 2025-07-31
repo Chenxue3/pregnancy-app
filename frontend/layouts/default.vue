@@ -1,8 +1,5 @@
 <template>
   <v-app ref="base_background" class="root">
-    <div v-show="load_app" class="loading">
-      <loading-bar />
-    </div>
     <div class="rightPanel">
       <div>
         <div class="pa-0 black">
@@ -61,14 +58,12 @@ export default {
       multiplier: 1,
       panelHeight: 0,
       isVideo: true,
-      load_app: true,
       ultrasoundToolComponent: null, // Reference to ultrasound tool component
     };
   },
 
   computed: {
     mdAndUp() {
-      this.load_app = false;
       return this.$vuetify.breakpoint.mdAndUp;
     },
   },
@@ -172,18 +167,6 @@ export default {
 <style scoped lang="scss">
 .root {
   user-select: none;
-}
-.loading {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 9999;
-  width: 100vw;
-  height: 100vh;
-  background: black;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 }
 .outer-large {
   min-width: 409px;

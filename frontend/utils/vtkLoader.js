@@ -147,7 +147,7 @@ export default class VTKLoader {
    */
   async fetchVTKFile(vtkFilePath, onProgress = null) {
     if (onProgress) {
-      onProgress("Downloading model data", 20);
+      onProgress("Downloading model data...", 20);
     }
 
     const response = await fetch(vtkFilePath);
@@ -1129,65 +1129,34 @@ midToHigh.BLUE_START
       return { success: true, mesh, isPointCloud: cachedData.isPointCloud, radiusData: cachedData.radiusData, pressureData: cachedData.pressureData };
     }
 
-    // Phase 1: Quick loading with reduced detail
+    // Load directly with cylinder geometry instead of showing lines first
     if (config.onProgress) {
       config.onProgress(`Loading ${config.displayName}`, 5);
     }
 
     const vtkData = await this.fetchVTKFile(vtkFilePath, config.onProgress);
     
-    // Create low-detail version first (reduced segments, simpler geometry)
-    const lowDetailConfig = {
-      ...config,
-      cylinderSegments: Math.max(4, Math.floor(config.cylinderSegments / 2)), // Reduce segments
-      useCylinderGeometry: false, // Use lines first for speed
-      enableWireframe: false // Disable wireframe for speed
-    };
+    // Create cylinder geometry directly (no lines first)
+    const cylinderResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, true, config);
+    const cylinderMesh = this.createVTKMesh(cylinderResult.geometry, cylinderResult.isPointCloud, config, cylinderResult.radiusData, cylinderResult.pressureData);
     
-    const lowDetailResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, false, lowDetailConfig);
-    const lowDetailMesh = this.createVTKMesh(lowDetailResult.geometry, lowDetailResult.isPointCloud, lowDetailConfig, lowDetailResult.radiusData, lowDetailResult.pressureData);
+    // Add cylinder mesh directly
+    this.addToScene(cylinderMesh, config);
     
-    // Add low-detail mesh first
-    this.addToScene(lowDetailMesh, config);
-    
-    // Model loaded and displayed, no need to show progress percentage
+    // Cache the cylinder version
+    this.lodCache.set(cacheKey, {
+      geometry: cylinderResult.geometry,
+      isPointCloud: cylinderResult.isPointCloud,
+      radiusData: cylinderResult.radiusData,
+      pressureData: cylinderResult.pressureData
+    });
 
-    // Call completion callback for quick preview
+    // Call completion callback
     if (config.onComplete) {
-      config.onComplete(lowDetailMesh, lowDetailResult.isPointCloud, lowDetailResult.radiusData, lowDetailResult.pressureData);
+      config.onComplete(cylinderMesh, cylinderResult.isPointCloud, cylinderResult.radiusData, cylinderResult.pressureData);
     }
 
-    // Phase 2: Load high-detail version in background
-    setTimeout(async () => {
-      try {
-        
-
-        const highDetailResult = this.parseVTKData(vtkData, null, config.modelSize, config.useCylinderGeometry, config);
-        const highDetailMesh = this.createVTKMesh(highDetailResult.geometry, highDetailResult.isPointCloud, config, highDetailResult.radiusData, highDetailResult.pressureData);
-        
-        // Cache the high-detail version
-        this.lodCache.set(cacheKey, {
-          geometry: highDetailResult.geometry,
-          isPointCloud: highDetailResult.isPointCloud,
-          radiusData: highDetailResult.radiusData,
-          pressureData: highDetailResult.pressureData
-        });
-
-        // Replace low-detail with high-detail
-        this.scene.remove(lowDetailMesh);
-        this.addToScene(highDetailMesh, { ...config, clearScene: false });
-        
-        // Don't show progress when enhancement is complete, model is already displayed
-
-        // Update the current mesh reference
-        this.currentVTKMesh = highDetailMesh;
-        
-      } catch (error) {
-        console.warn('[VTKLoader] Failed to load high-detail version, keeping low-detail:', error);
-      }
-    }, 100); // Small delay to allow UI update
-
-    return { success: true, mesh: lowDetailMesh, isPointCloud: lowDetailResult.isPointCloud, radiusData: lowDetailResult.radiusData, pressureData: lowDetailResult.pressureData };
+    return { success: true, mesh: cylinderMesh, isPointCloud: cylinderResult.isPointCloud, radiusData: cylinderResult.radiusData, pressureData: cylinderResult.pressureData };
   }
 
   /**

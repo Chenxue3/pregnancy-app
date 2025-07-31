@@ -346,7 +346,9 @@ export default {
         ...baseConfig,
         ...options,
         // Handle high quality option
-        cylinderSegments: options.highQuality ? 12 : (options.cylinderSegments || baseConfig.cylinderSegments)
+        cylinderSegments: options.highQuality ? 12 : (options.cylinderSegments || baseConfig.cylinderSegments),
+        // Force useCylinderGeometry to true to avoid line rendering first
+        useCylinderGeometry: true
       };
 
       const vtkPath = this.getAssetPath(config.path);
@@ -358,8 +360,10 @@ export default {
         useCylinderGeometry: config.useCylinderGeometry,
         cylinderSegments: config.cylinderSegments,
         clearPrevious: options.clearScene !== false, // Only clear if not explicitly set to false
+        // Disable LoD to avoid showing lines first
+        useLoD: false,
         onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
+          const progressMessage = `${message}`;
           this.$emit('model-state-updated', { modelName: progressMessage });
         },
         onComplete: (mesh, isPointCloud, radiusData, pressureData) => {
@@ -610,30 +614,8 @@ export default {
   height: 100vw;
 }
 
-
-
-// Loading placeholder styles
-.loading-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-  
-  .loading-text {
-    color: #fff;
-    font-size: 18px;
-    font-weight: 300;
-    text-align: center;
-    opacity: 0.8;
-  }
-}
-
 // Responsive adjustments for mobile
 @media (max-width: 768px) {
-  .loading-placeholder {
-    height: 100vw;
-  }
+  // Mobile responsive adjustments
 }
 </style> 

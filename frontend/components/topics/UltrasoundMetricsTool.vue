@@ -347,7 +347,7 @@ export default {
   padding: 0 16px;
 }
 
-// Exciting Pregnancy Hero Section (kept as requested)
+// Exciting Pregnancy Hero Section with enhanced theme colors
 .pregnancy-hero {
   position: relative;
   background: linear-gradient(135deg, #1F6683 0%, #313657 50%, #DD3C51 100%);
@@ -355,7 +355,7 @@ export default {
   padding: 40px 30px;
   margin-bottom: 40px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(31, 102, 131, 0.4);
+  box-shadow: 0 15px 40px rgba(221, 60, 81, 0.3);
   
   &::before {
     content: '';
@@ -425,10 +425,12 @@ export default {
 }
 
 .gradient-text {
-  background: linear-gradient(45deg, #D1C7B5 30%, #6C90B9 100%);
+  background: linear-gradient(45deg, #D1C7B5 30%, #6C90B9 70%, #D1C7B5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  font-weight: 800;
+  text-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .sparkle-icon {
@@ -447,13 +449,16 @@ export default {
 }
 
 .hero-subtitle {
-  font-size: 1.1em;
-  line-height: 1.6;
+  font-size: 1.15em;
+  line-height: 1.7;
   margin-bottom: 25px;
-  opacity: 0.95;
-  max-width: 600px;
+  opacity: 0.98;
+  max-width: 650px;
   margin-left: auto;
   margin-right: auto;
+  font-weight: 400;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  letter-spacing: 0.3px;
 }
 
 
@@ -465,9 +470,12 @@ export default {
 .main-title {
   text-align: center;
   color: #313657;
-  font-size: 2.5em;
-  font-weight: 700;
-  margin-bottom: 40px;
+  font-size: 2.8em;
+  font-weight: 800;
+  margin-bottom: 50px;
+  text-shadow: 0 2px 8px rgba(49, 54, 87, 0.1);
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .navigation-cards {
@@ -479,12 +487,16 @@ export default {
 
 .section-card {
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   border-left: 4px solid transparent;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.95) 100%);
+  backdrop-filter: blur(10px);
   
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(49, 54, 87, 0.15), 0 4px 15px rgba(221, 60, 81, 0.1);
+    border-left-color: #DD3C51;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,1) 100%);
   }
 }
 
@@ -504,15 +516,20 @@ export default {
 
 .section-title {
   color: #313657;
-  font-size: 1.3em;
-  font-weight: 600;
+  font-size: 1.35em;
+  font-weight: 700;
   margin: 0;
+  line-height: 1.3;
+  letter-spacing: -0.2px;
 }
 
 .section-description {
-  color: #6C90B9;
-  line-height: 1.5;
+  color: #1F6683;
+  line-height: 1.6;
   margin: 0;
+  font-weight: 400;
+  font-size: 0.95em;
+  opacity: 0.9;
 }
 
 // Section Details
@@ -531,66 +548,156 @@ export default {
 .content-blocks {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  
+  .v-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(209, 199, 181, 0.05) 100%);
+    border: 1px solid rgba(31, 102, 131, 0.1);
+  }
   
   h4 {
-    color: #1F6683;
-    font-weight: 600;
-    margin-bottom: 8px;
+    color: #DD3C51;
+    font-weight: 700;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    letter-spacing: -0.1px;
   }
   
   p {
-    line-height: 1.6;
+    line-height: 1.7;
     color: #313657;
+    font-size: 1em;
+    font-weight: 400;
+    opacity: 0.95;
   }
 }
 
 // Interactive Tool Styles
 .metrics-form {
-  border-left: 4px solid #1F6683;
-  background: rgba(49, 54, 87, 0.05);
+  border-left: 5px solid #DD3C51;
+  background: linear-gradient(135deg, rgba(209, 199, 181, 0.08) 0%, rgba(108, 144, 185, 0.05) 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(31, 102, 131, 0.1);
   
   h4 {
-    color: #1F6683;
-    font-weight: 600;
+    color: #313657;
+    font-weight: 700;
+    font-size: 1.2em;
+    margin-bottom: 16px;
   }
 }
 
 .results-panel {
+  border-radius: 12px;
+  box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+  border: 2px solid rgba(255,255,255,0.2);
+  
   .results-content {
     .results-summary {
-      font-size: 1.1em;
+      font-size: 1.15em;
+      font-weight: 600;
+      line-height: 1.4;
     }
     
     .findings {
       ul {
-        padding-left: 20px;
+        padding-left: 24px;
         
         li {
-          margin-bottom: 4px;
+          margin-bottom: 8px;
+          line-height: 1.5;
+          font-weight: 400;
         }
       }
+    }
+    
+    h4 {
+      font-size: 1.3em;
+      font-weight: 700;
     }
   }
 }
 
-// Responsive Design
+// Enhanced Responsive Design
 @media (max-width: 768px) {
   .ultrasound-page {
-    padding: 0 8px;
+    padding: 0 12px;
+  }
+  
+  .pregnancy-hero {
+    padding: 30px 20px;
+    margin-bottom: 30px;
+    
+    .hero-title {
+      font-size: 1.8em;
+    }
+    
+    .hero-subtitle {
+      font-size: 1em;
+      line-height: 1.6;
+    }
   }
   
   .main-title {
-    font-size: 2em;
+    font-size: 2.2em;
+    margin-bottom: 30px;
   }
   
   .navigation-cards {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 18px;
   }
   
   .section-content {
-    padding: 16px;
+    padding: 20px;
+  }
+  
+  .content-blocks {
+    gap: 16px;
+    
+    h4 {
+      font-size: 1.05em;
+    }
+    
+    p {
+      font-size: 0.95em;
+    }
+  }
+}
+
+// Enhanced Typography
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+// Better contrast and readability
+.v-card {
+  &.elevation-2, &.elevation-3 {
+    box-shadow: 0 3px 12px rgba(49, 54, 87, 0.12), 0 1px 6px rgba(31, 102, 131, 0.08) !important;
+  }
+}
+
+// Input field styling
+.v-text-field {
+  .v-input__control .v-input__slot {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+  }
+  
+  .v-label {
+    color: #313657 !important;
+    font-weight: 500;
+  }
+}
+
+// Button styling improvements
+.v-btn {
+  text-transform: none !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px !important;
+  
+  &:not(.v-btn--outlined) {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
   }
 }
 </style>

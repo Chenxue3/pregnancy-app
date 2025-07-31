@@ -73,8 +73,13 @@ export default {
     },
     handTopicClick(topic) {
       this.selectedTopic = topic;
-      if (topic.title !== "Home") {
-        this.subMenuActive = true;
+      
+      // Only show sub-menu if topic has more than one sub-topic and it's not "Home"
+      if (topic.title !== "Home" && topic.subTopics) {
+        const subTopicsCount = Object.keys(topic.subTopics).length;
+        this.subMenuActive = subTopicsCount > 1;
+      } else {
+        this.subMenuActive = false;
       }
     },
   },
@@ -92,8 +97,13 @@ export default {
 
   watch: {
     selectedTopic: function (currentTopic) {
-      this.subMenuActive =
-        Object.keys(currentTopic.subTopics).length > 1 ? true : false;
+      // Hide sub-tabs if there's only one or no sub-topics
+      if (currentTopic && currentTopic.subTopics) {
+        const subTopicsCount = Object.keys(currentTopic.subTopics).length;
+        this.subMenuActive = subTopicsCount > 1;
+      } else {
+        this.subMenuActive = false;
+      }
     },
     subMenuActive: function (isActive) {
       $nuxt.$emit("menu-height-changed", isActive ? "2" : "1");
@@ -105,6 +115,14 @@ export default {
     if (this.$route.name === "slug") {
       const parentSlug = this.$parentTopic().slug.toLowerCase();
       this.selectedTopic = this.topics[parentSlug];
+      
+      // Set initial sub-menu state based on the selected topic
+      if (this.selectedTopic && this.selectedTopic.subTopics) {
+        const subTopicsCount = Object.keys(this.selectedTopic.subTopics).length;
+        this.subMenuActive = subTopicsCount > 1;
+      } else {
+        this.subMenuActive = false;
+      }
     }
   },
 };

@@ -19,27 +19,29 @@
         <div class="control-group">
           <v-btn 
             @click="$emit('reload-arterial')" 
-            color="error" 
+            color="#DD3C51" 
             block 
-            class="mb-2"
+            class="mb-2 arterial-btn"
             :disabled="isLoading"
             :loading="isLoading"
+            dark
           >
             <v-icon left>mdi-arterial</v-icon>
             Arterial Tree
           </v-btn>
           <v-btn 
             @click="$emit('load-venous')" 
-            color="primary" 
+            color="#1F6683" 
             block 
-            class="mb-2"
+            class="mb-2 venous-btn"
             :disabled="isLoading"
             :loading="isLoading"
+            dark
           >
             <v-icon left>mdi-heart-pulse</v-icon>
             Venous Tree
           </v-btn>
-          <v-btn @click="$emit('load-combined')" color="success" block class="mb-2" :disabled="isLoading" :loading="isLoading">
+          <v-btn @click="$emit('load-combined')" color="#6C90B9" block class="mb-2 combined-btn" :disabled="isLoading" :loading="isLoading" dark>
             <v-icon left>mdi-network</v-icon>
             Combined Trees
           </v-btn>
@@ -191,14 +193,16 @@ export default {
 
 <style scoped lang="scss">
 
-.control-panel {
+.model-control {
   position: relative;
   width: 100%;
-  background: rgba(149, 63, 63, 0.85);
+  background: rgba(49, 54, 87, 0.9);
   border-radius: 12px;
-  color: white;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  color: #D1C7B5;
+  box-shadow: 0 4px 20px rgba(31, 102, 131, 0.3);
+  border: 2px solid #1F6683;
   overflow: hidden;
+  margin-bottom: 16px;
 }
 
 .collapse-header {
@@ -219,7 +223,7 @@ export default {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
+  color: #D1C7B5;
   display: flex;
   align-items: center;
 }
@@ -242,6 +246,23 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.control-section {
+  margin-bottom: 20px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.control-title {
+  color: #6C90B9;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 
@@ -492,7 +513,7 @@ export default {
 
 .legend-text {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #D1C7B5;
   font-weight: 500;
 }
 
@@ -500,7 +521,7 @@ export default {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #D1C7B5;
   font-weight: 500;
 }
 
@@ -517,10 +538,45 @@ export default {
   text-align: right;
 }
 
-// Custom button styles
+// Custom button styles with theme colors
 .v-btn {
   text-transform: none !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.3s ease !important;
+  
+  &.arterial-btn {
+    background-color: #DD3C51 !important;
+    border-color: #DD3C51 !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #C13347 !important;
+      box-shadow: 0 6px 20px rgba(221, 60, 81, 0.4) !important;
+      transform: translateY(-2px);
+    }
+  }
+  
+  &.venous-btn {
+    background-color: #1F6683 !important;
+    border-color: #1F6683 !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #1A5A75 !important;
+      box-shadow: 0 6px 20px rgba(31, 102, 131, 0.4) !important;
+      transform: translateY(-2px);
+    }
+  }
+  
+  &.combined-btn {
+    background-color: #6C90B9 !important;
+    border-color: #6C90B9 !important;
+    
+    &:hover:not(:disabled) {
+      background-color: #5F7FA5 !important;
+      box-shadow: 0 6px 20px rgba(108, 144, 185, 0.4) !important;
+      transform: translateY(-2px);
+    }
+  }
 }
 
 .status-text {

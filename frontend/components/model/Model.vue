@@ -21,6 +21,7 @@
             src="~/assets/images/gestures-icons.png"
             class="h-full w-full md:object-contain"
             @click="handleGestureIconClick"
+            v-show="mdAndUp" 
           />
           
         </div>

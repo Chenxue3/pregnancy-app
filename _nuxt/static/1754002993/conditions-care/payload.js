@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/conditions-care", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Cares",heading:"When baby needs extra care after birth",icon:"mdi-human-baby-changing-table",dataFile:"baby-care-after-birth",category:"success",subTitle:"subSuccess",model:{name:"LargeInfarct"},parentTopic:{slug:"conditions",heading:"Pregnancy Concerns",title:"Concerns"}}]]});

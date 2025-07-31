@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/pregnancy-fetal-dev", {data:[{}],fetch:{},mutations:[["setCurrentContent",{title:"Fetal Growth",heading:"Fetal Development",icon:"mdi-baby-face",dataFile:"fetal-development",category:"success",subTitle:"subSuccess",model:{name:"NoInfarct"},parentTopic:{slug:"pregnancy",heading:"What is Happening in Pregnancy?",title:"Pregnancy"}}]]});

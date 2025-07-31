@@ -1,175 +1,92 @@
 /**
- * VTK File Loader Utility
- * Provides reusable functions for loading and processing VTK files in Three.js
- * 
- * Usage:
- * import VTKLoader from '@/utils/vtkLoader'
- * const loader = new VTKLoader(THREE, scene)
- * await loader.loadVTKFile('/path/to/file.vtk', options)
+ * VTK File Loader Utility - Three.js VTK processing with color mapping
  */
 
-
-// Color and Rendering Constants
+// Configuration Constants
 const COLOR_CONSTANTS = {
-  // Default color values
   DEFAULT_COLOR: 0xff2222,
   DEFAULT_OPACITY: 0.9,
   DEFAULT_RADIUS_FALLBACK: 0.1,
-  
-  // Default vessel colors
-  ARTERIAL_COLOR: 0xff2222,  // Red for arterial
-  VENOUS_COLOR: 0x2222ff,    // Blue for venous
-  
-  // Color mapping parameters
+  ARTERIAL_COLOR: 0xff2222,
+  VENOUS_COLOR: 0x2222ff,
   COLOR_MAPPING: {
     NONLINEAR_EXPONENT: 0.4,
     NEUTRAL_VALUE: 0.5,
-    
-    // Low to medium pressure (green to orange)
     LOW_TO_MID: {
-      RED_START: 0.23,
-      RED_RANGE: 0.75,
-      GREEN_START: 0.70,
-      GREEN_RANGE: 0.23,
-      BLUE_START: 0.27,
-      BLUE_RANGE: -0.27
+      RED_START: 0.23, RED_RANGE: 0.75,
+      GREEN_START: 0.70, GREEN_RANGE: 0.23,
+      BLUE_START: 0.27, BLUE_RANGE: -0.27
     },
-    
-    // Medium to high pressure (orange to dark red)
     MID_TO_HIGH: {
-      RED_START: 0.98,
-      RED_RANGE: -0.42,
-      GREEN_START: 0.93,
-      GREEN_RANGE: -0.81,
+      RED_START: 0.98, RED_RANGE: -0.42,
+      GREEN_START: 0.93, GREEN_RANGE: -0.81,
       BLUE_START: 0.00
     }
   },
-  
-  // Lighting configuration
   LIGHTING: {
-    AMBIENT_COLOR: 0x664444,
-    AMBIENT_INTENSITY: 0.6,
-    MAIN_LIGHT_COLOR: 0xffffff,
-    MAIN_LIGHT_INTENSITY: 0.8,
-    FILL_LIGHT_COLOR: 0xffeedd,
-    FILL_LIGHT_INTENSITY: 0.4,
-    RIM_LIGHT_COLOR: 0xaaffff,
-    RIM_LIGHT_INTENSITY: 0.3,
-    INTERNAL_LIGHT1_COLOR: 0xff6666,
-    INTERNAL_LIGHT1_INTENSITY: 0.5,
-    INTERNAL_LIGHT1_DISTANCE: 100,
-    INTERNAL_LIGHT2_COLOR: 0x6666ff,
-    INTERNAL_LIGHT2_INTENSITY: 0.3,
-    INTERNAL_LIGHT2_DISTANCE: 80
+    AMBIENT_COLOR: 0x664444, AMBIENT_INTENSITY: 0.6,
+    MAIN_LIGHT_COLOR: 0xffffff, MAIN_LIGHT_INTENSITY: 0.8,
+    FILL_LIGHT_COLOR: 0xffeedd, FILL_LIGHT_INTENSITY: 0.4,
+    RIM_LIGHT_COLOR: 0xaaffff, RIM_LIGHT_INTENSITY: 0.3,
+    INTERNAL_LIGHT1_COLOR: 0xff6666, INTERNAL_LIGHT1_INTENSITY: 0.5, INTERNAL_LIGHT1_DISTANCE: 100,
+    INTERNAL_LIGHT2_COLOR: 0x6666ff, INTERNAL_LIGHT2_INTENSITY: 0.3, INTERNAL_LIGHT2_DISTANCE: 80
   }
 };
 
 export default class VTKLoader {
-  /**
-   * Initialize VTK Loader
-   * @param {Object} THREE - Three.js library instance
-   * @param {Object} scene - Three.js scene object
-   */
   constructor(THREE, scene) {
     this.THREE = THREE;
     this.scene = scene;
     this.currentVTKMesh = null;
     this.wireframeMesh = null;
     this.lightingInitialized = false;
-    this.performanceMode = 'high'; // Default performance mode
-    this.allVTKMeshes = []; // Track all loaded VTK meshes for proper cleanup
-    this.enableLoD = true; // Enable Level of Detail optimization
-    this.lodCache = new Map(); // Cache for different LoD levels
+    this.performanceMode = 'high';
+    this.allVTKMeshes = [];
+    this.enableLoD = true;
+    this.lodCache = new Map();
   }
 
-  /**
-   * Generic VTK file loader - can load any VTK file with custom settings
-   * @param {string} vtkFilePath - Path to VTK file
-   * @param {Object} options - Configuration options
-   * @param {string} options.displayName - Display name for user (default: 'VTK Model')
-   * @param {number} options.color - Hex color for the model (default: 0xff2222)
-   * @param {number} options.opacity - Opacity value 0-1 (default: 0.9)
-   * @param {number} options.lineWidth - Line width for line segments (auto-calculated if not provided)
-   * @param {number} options.pointSize - Point size for point cloud (auto-calculated if not provided)
-   * @param {number} options.modelSize - Target model size in units (default: 420)
-   * @param {boolean} options.enableWireframe - Enable wireframe overlay (default: true)
-   * @param {boolean} options.useCylinderGeometry - Use cylinder geometry with radius data (default: true)
-   * @param {number} options.cylinderSegments - Number of radial segments for cylinders (default: 8)
-   * @param {boolean} options.enablePressureMapping - Enable pressure-based color mapping (default: true)
-   * @param {string} options.colorMappingType - Color mapping type: 'pressure', 'flux', or 'default' (default: 'pressure')
-   * @param {boolean} options.clearScene - Clear existing meshes before adding new one (default: true)
-   * @param {boolean} options.useLoD - Use Level of Detail optimization for faster loading (default: true)
-   * @param {Function} options.onProgress - Progress callback function
-   * @param {Function} options.onComplete - Completion callback function
-   * @returns {Promise<Object>} - {success: boolean, mesh: THREE.Object3D, error?: Error}
-   */
+  // Main VTK file loader with options for color mapping, geometry type, etc.
   async loadVTKFile(vtkFilePath, options = {}) {
-    // Set default options with auto-scaling based on model size
-    const modelSize = options.modelSize || 420; // Default target size
+    const modelSize = options.modelSize || 420;
     const config = {
       displayName: 'placental model',
       color: COLOR_CONSTANTS.DEFAULT_COLOR,
       opacity: COLOR_CONSTANTS.DEFAULT_OPACITY,
       modelSize: modelSize,
-      // Auto-calculate line width and point size based on model size if not provided
-      lineWidth: options.lineWidth || Math.max(2, Math.round(modelSize / 70)), // Scale: 420→6, 280→4, 140→2
-      pointSize: options.pointSize || Math.max(8, Math.round(modelSize / 17)), // Scale: 420→25, 280→16, 140→8
+      lineWidth: options.lineWidth || Math.max(2, Math.round(modelSize / 70)),
+      pointSize: options.pointSize || Math.max(8, Math.round(modelSize / 17)),
       enableWireframe: true,
-      useCylinderGeometry: true, 
-      cylinderSegments: 10, // Number of radial segments for cylinders
-      enablePressureMapping: true, // Enable pressure mapping by default
-      enableFluxMapping: false, // Enable flux mapping by default
-      colorMappingType: 'pressure', // Default to pressure mapping: 'pressure', 'flux', or 'default'
-      clearScene: true, // Clear scene by default
-      useLoD: true, // Enable LoD by default
+      useCylinderGeometry: true,
+      cylinderSegments: 10,
+      colorMappingType: 'pressure',
+      clearScene: true,
+      useLoD: true,
       onProgress: null,
       onComplete: null,
-      ...options
+      ...options 
     };
 
-    // Call progress callback - Initializing
-    if (config.onProgress) {
-      config.onProgress(`Initializing ${config.displayName}`, 0);
-    }
+    if (config.onProgress) config.onProgress(`Initializing ${config.displayName}`, 0);
 
     try {
-      // Check if LoD is enabled and use fast loading for initial display
-      if (config.useLoD && this.enableLoD) {
-        return await this.loadWithLoD(vtkFilePath, config);
-      } else {
-        // Standard loading
-        return await this.loadStandard(vtkFilePath, config);
-      }
+      return config.useLoD && this.enableLoD
+        ? await this.loadWithLoD(vtkFilePath, config)
+        : await this.loadStandard(vtkFilePath, config);
     } catch (error) {
       console.error(`[VTKLoader] Failed to load VTK file ${vtkFilePath}:`, error);
       return { success: false, error };
     }
   }
 
-  /**
-   * Fetch VTK file from server
-   * @param {string} vtkFilePath - Path to VTK file
-   * @param {Function} onProgress - Progress callback
-   * @returns {Promise<string>} - VTK file content as text
-   */
   async fetchVTKFile(vtkFilePath, onProgress = null) {
-    if (onProgress) {
-      onProgress("Downloading model data...", 20);
-    }
+    if (onProgress) onProgress("Downloading model data...", 20);
 
     const response = await fetch(vtkFilePath);
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     
-    // Check if file was found
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    // Read VTK file content as text
     const vtkData = await response.text();
-    
-    if (onProgress) {
-      onProgress("Processing model data", 40);
-    }
+    if (onProgress) onProgress("Processing model data", 40);
     
     return vtkData;
   }

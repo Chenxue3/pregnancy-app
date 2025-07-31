@@ -69,6 +69,7 @@ export default {
       clientMounted: false, // Track if component is mounted on client
       currentModelType: 'arterial', // Track currently loaded model type
       currentColorMappingType: 'pressure', // Track current color mapping type
+      renderingComplete: false, // Track if model is fully rendered and ready
       
       // Model configuration for different tree types
       modelConfig: {
@@ -349,7 +350,12 @@ export default {
       
       // Reload the current model with new color mapping
       try {
-        this.$emit('model-state-updated', { modelName: 'Updating color mapping...' });
+        // Set rendering state to false when updating color mapping
+        this.renderingComplete = false;
+        this.$emit('model-state-updated', { 
+          modelName: 'Updating color mapping...',
+          renderingComplete: false 
+        });
         
         await this.loadTree(this.currentModelType, {
           colorMappingType: colorMappingType,
@@ -371,6 +377,13 @@ export default {
      */
     async loadTree(modelType, options = {}) {
       console.log(`[Model] Loading ${modelType} model...`);
+      
+      // Set rendering state to false when starting to load
+      this.renderingComplete = false;
+      this.$emit('model-state-updated', { 
+        modelName: `Loading ${modelType} model...`,
+        renderingComplete: false 
+      });
       
       // Get base configuration for this model type
       const baseConfig = this.modelConfig[modelType];
@@ -418,8 +431,14 @@ export default {
           this.$emit('model-state-updated', { modelName: progressMessage });
         },
         onComplete: () => {
+          // Set rendering state to true when loading is complete
+          this.renderingComplete = true;
+          
           // Emit state update to parent
-          this.$emit('model-state-updated', { modelName: config.displayName });
+          this.$emit('model-state-updated', { 
+            modelName: config.displayName,
+            renderingComplete: true 
+          });
           
           // Load camera view and resize
           const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
@@ -455,8 +474,12 @@ export default {
           });
         }
         
-        // Update final name
-        this.$emit('model-state-updated', { modelName: baseConfig.displayName });
+        // Update final name and ensure rendering is complete
+        this.renderingComplete = true;
+        this.$emit('model-state-updated', { 
+          modelName: baseConfig.displayName,
+          renderingComplete: true 
+        });
         
       } catch (error) {
         console.error('[Model] Error loading combined models:', error);

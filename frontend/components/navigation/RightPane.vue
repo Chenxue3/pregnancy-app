@@ -23,6 +23,7 @@
           :pressure-mapping="modelStates.pressureMapping"
           :is-loading="modelStates.isLoading"
           :loading-complete="modelStates.loadingComplete"
+          :rendering-complete="modelStates.renderingComplete"
           @reload-arterial="handleReloadArterial"
           @load-venous="handleLoadVenous"
           @load-combined="handleLoadCombinedTrees"
@@ -84,6 +85,7 @@ export default {
         isLoading: false, // Track if model is currently loading - initialize to false
         loadingComplete: false, // Track if loading has completed
         colorMappingType: 'pressure', // Track current color mapping type
+        renderingComplete: false, // Track if model is fully rendered and ready for interaction
       },
       // TODO: get waveform data from model
       waveformData: {
@@ -203,6 +205,12 @@ export default {
       
       if (newStates.hasOwnProperty('loadingComplete') && newStates.loadingComplete) {
         this.modelStates.loadingComplete = newStates.loadingComplete;
+      }
+      
+      // Handle rendering complete state updates
+      if (newStates.hasOwnProperty('renderingComplete')) {
+        this.modelStates.renderingComplete = newStates.renderingComplete;
+        console.log('[RightPane] Rendering complete updated to:', newStates.renderingComplete);
       }
     },
     

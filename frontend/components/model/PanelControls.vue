@@ -22,7 +22,7 @@
             color="#DD3C51" 
             block 
             class="mb-2 arterial-btn"
-            :disabled="isLoading"
+            :disabled="isLoading || !renderingComplete"
             :loading="isLoading"
             dark
           >
@@ -34,24 +34,27 @@
             color="#1F6683" 
             block 
             class="mb-2 venous-btn"
-            :disabled="isLoading"
+            :disabled="isLoading || !renderingComplete"
             :loading="isLoading"
             dark
           >
             <v-icon left>mdi-heart-pulse</v-icon>
             Venous Tree
           </v-btn>
-          <v-btn @click="$emit('load-combined')" color="#6C90B9" block class="mb-2 combined-btn" :disabled="isLoading" :loading="isLoading" dark>
+          <v-btn @click="$emit('load-combined')" color="#6C90B9" block class="mb-2 combined-btn" :disabled="isLoading || !renderingComplete" :loading="isLoading" dark>
             <v-icon left>mdi-network</v-icon>
             Combined Trees
           </v-btn>
           <div class="colored-models">
             Colored Models by: {{ coloredModelsBy }}
-            <v-radio-group inline v-model="coloredModelsBy" @change="$emit('colored-models-by-changed', coloredModelsBy)">
+            <v-radio-group inline v-model="coloredModelsBy" @change="$emit('colored-models-by-changed', coloredModelsBy)" :disabled="isLoading || !renderingComplete">
               <v-radio label="Pressure" value="pressure"></v-radio>
               <v-radio label="Flux" value="flux"></v-radio>
               <v-radio label="Default" value="default"></v-radio>
             </v-radio-group>
+            <div v-if="!renderingComplete && !isLoading" class="rendering-status">
+              <small style="color: #FFA500; font-style: italic;">Waiting for model to fully render...</small>
+            </div>
           </div>
         </div>
 
@@ -84,7 +87,7 @@
             <span v-if="coloredModelsBy === 'pressure'" class="label-center">Normal</span>
             <span v-if="coloredModelsBy === 'pressure'" class="label-right">High Pressure</span>
             
-            <span v-if="coloredModelsBy === 'flux'" class="label-left">Reverse Flow</span>
+            <span v-if="coloredModelsBy === 'flux'" class="label-left">Low  Flow</span>
             <span v-if="coloredModelsBy === 'flux'" class="label-right">High Flow</span>
           </div>
         </div>
@@ -133,6 +136,10 @@ export default {
       default: false
     },
     loadingComplete: {
+      type: Boolean,
+      default: false
+    },
+    renderingComplete: {
       type: Boolean,
       default: false
     },
@@ -554,6 +561,11 @@ export default {
       box-shadow: 0 6px 20px rgba(221, 60, 81, 0.4) !important;
       transform: translateY(-2px);
     }
+    
+    &:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
   }
   
   &.venous-btn {
@@ -564,6 +576,11 @@ export default {
       background-color: #1A5A75 !important;
       box-shadow: 0 6px 20px rgba(31, 102, 131, 0.4) !important;
       transform: translateY(-2px);
+    }
+    
+    &:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
     }
   }
   
@@ -576,7 +593,17 @@ export default {
       box-shadow: 0 6px 20px rgba(108, 144, 185, 0.4) !important;
       transform: translateY(-2px);
     }
+    
+    &:disabled {
+      opacity: 0.5 !important;
+      cursor: not-allowed !important;
+    }
   }
+}
+
+.rendering-status {
+  margin-top: 8px;
+  text-align: center;
 }
 
 .status-text {

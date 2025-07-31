@@ -43,7 +43,16 @@
             <v-icon left>mdi-network</v-icon>
             Combined Trees
           </v-btn>
+          <div class="colored-models">
+            Colored Models by: {{ coloredModelsBy }}
+            <v-radio-group inline v-model="coloredModelsBy" @change="$emit('colored-models-by-changed', coloredModelsBy)">
+              <v-radio label="Pressure" value="pressure"></v-radio>
+              <v-radio label="Flux" value="flux"></v-radio>
+              <v-radio label="Default" value="default"></v-radio>
+            </v-radio-group>
+          </div>
         </div>
+
       </div>
 
       <br />
@@ -85,19 +94,7 @@ export default {
       type: String,
       default: 'high'
     },
-
-    renderingType: {
-      type: String,
-      default: '3D Cylinders'
-    },
-    pressureColorMapping: {
-      type: Object,
-      default: null
-    },
-    pressureMapping: {
-      type: Boolean,
-      default: true
-    },
+    
     isLoading: {
       type: Boolean,
       default: false
@@ -108,6 +105,9 @@ export default {
     },
     waveform: { type: Array, default: () => [] }, // [{t, value}]
   },
+  mounted() {
+    this.coloredModelsBy = 'pressure';
+  },
 
   data() {
     return {
@@ -116,7 +116,7 @@ export default {
       currentQuality: 'standard',     // 'standard' or 'high'
       chart: null,
       playheadTimer: null,
-     
+      coloredModelsBy: 'pressure'
     };
   },
 
@@ -145,8 +145,8 @@ export default {
   },
 
   // Events emitted to parent component:
-  // - 'reload-arterial': load arterial tree (standard quality)
-  // - 'load-venous': load venous tree (standard quality)
+  // - 'reload-arterial': load arterial tree
+  // - 'load-venous': load venous tree
   // - 'load-combined': load combined arterial and venous trees
 
 

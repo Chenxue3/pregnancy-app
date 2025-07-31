@@ -113,6 +113,7 @@ export default class VTKLoader {
       useCylinderGeometry: true, 
       cylinderSegments: 10, // Number of radial segments for cylinders
       enablePressureMapping: true, // Enable pressure mapping by default
+      enableFluxMapping: false, // Enable flux mapping by default
       clearScene: true, // Clear scene by default
       useLoD: true, // Enable LoD by default
       onProgress: null,
@@ -1103,7 +1104,7 @@ midToHigh.BLUE_START
   clearTemporaryData() {
     // This method can be extended to clear any temporary visualizations
     // For now, it's a placeholder for future functionality
-    console.log('[VTKLoader] Cleared temporary data');
+    
   }
 
   /**

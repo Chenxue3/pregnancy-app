@@ -19,7 +19,6 @@
           :use-tube-rendering="modelStates.useTubeRendering"
           :current-performance-mode="modelStates.currentPerformanceMode"
           :model-name="modelStates.modelName"
-          :rendering-type="modelStates.renderingType"
           :pressure-color-mapping="modelStates.pressureColorMapping"
           :pressure-mapping="modelStates.pressureMapping"
           :is-loading="modelStates.isLoading"
@@ -27,8 +26,7 @@
           @reload-arterial="handleReloadArterial"
           @load-venous="handleLoadVenous"
           @load-combined="handleLoadCombinedTrees"
-          @load-arterial-cylinders="handleLoadArterialCylinders"
-          @load-venous-cylinders="handleLoadVenousCylinders"
+          @colored-models-by-changed="handleColoredModelsByChanged"
         />
       </div>
 
@@ -81,7 +79,6 @@ export default {
         useTubeRendering: true,
         currentPerformanceMode: "high",
         modelName: "Loading...",
-        renderingType: "3D Cylinders", // Default to 3D cylinder rendering
         pressureColorMapping: null, // Pressure color mapping for display
         pressureMapping: true, // Track pressure mapping state
         isLoading: false, // Track if model is currently loading - initialize to false
@@ -152,7 +149,6 @@ export default {
           displayName: 'Placental Arterial Tree',
           pressureMapping: this.modelStates.pressureMapping
         });
-        this.modelStates.renderingType = "3D Cylinders";
       }
     },
 
@@ -164,28 +160,12 @@ export default {
           displayName: 'Placental Venous Tree',
           pressureMapping: this.modelStates.pressureMapping
         });
-        this.modelStates.renderingType = "3D Cylinders";
       }
     },
 
-    handleLoadArterialCylinders() {
-      if (
-        this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadArterialTreeWithCylinders
-      ) {
-        this.$refs.modelComponent.loadArterialTreeWithCylinders();
-        this.modelStates.renderingType = "High Quality 3D";
-      }
-    },
-
-    handleLoadVenousCylinders() {
-      if (
-        this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadVenousTreeWithCylinders
-      ) {
-        this.$refs.modelComponent.loadVenousTreeWithCylinders();
-        this.modelStates.renderingType = "High Quality 3D";
-      }
+    handleColoredModelsByChanged(coloredModelsBy) {
+      this.modelStates.coloredModelsBy = coloredModelsBy;
+      this.$refs.modelComponent.reciveColoringType(coloredModelsBy);
     },
 
     // Handle combined model loading
@@ -195,7 +175,6 @@ export default {
         this.$refs.modelComponent.loadCombinedTrees
       ) {
         this.$refs.modelComponent.loadCombinedTrees();
-        this.modelStates.renderingType = "Combined Model";
       }
     },
 
@@ -320,7 +299,7 @@ export default {
     visualizeConditions(conditionData) {
       console.log('[RightPane] Visualizing pregnancy conditions in model:', conditionData);
       
-      // Placeholder for future model integration
+      // TODO: Placeholder for future model integration
       // This method will be expanded to:
       // 1. Analyze the selected conditions
       // 2. Load appropriate placental models based on conditions
@@ -357,7 +336,7 @@ export default {
         console.log('[RightPane] Future: Load larger placental model');
       }
       
-      // Future: Apply visual changes to the 3D model
+      // TODO：Future: Apply visual changes to the 3D model
       // - Model scaling based on condition effects
       // - Color coding for different risk levels
       // - Highlighting specific areas affected by conditions

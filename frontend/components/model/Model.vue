@@ -320,6 +320,11 @@ export default {
       await this.loadTree('arterial');
     },
 
+    reciveColoringType(colorModelBy){
+      console.log('[Model] Coloring type:', colorModelBy);
+     
+    },
+
     /**
      * Universal tree loading function - replaces all duplicated load methods
      * @param {string} modelType - 'arterial', 'venous', or 'combined'
@@ -414,7 +419,6 @@ export default {
 
     /**
      * Manual reload function - triggered by user button click
-     * Uses 3D cylinder geometry by default
      */
     async reloadModel() {
       console.log("User requested VTK model reload...");
@@ -427,33 +431,11 @@ export default {
     },
 
     /**
-     * Load arterial tree with cylinder geometry using radius data
-     */
-    async loadArterialTreeWithCylinders() {
-      console.log("Loading high quality arterial tree...");
-      await this.loadTree('arterial', {
-        highQuality: true,
-        displayName: 'High Quality Arterial Tree'
-      });
-    },
-
-    /**
      * Load venous tree 
      */
     async loadVenousTree() {
       console.log("Loading venous tree...");
       await this.loadTree('venous');
-    },
-
-    /**
-     * Load venous tree with high quality cylinders
-     */
-    async loadVenousTreeWithCylinders() {
-      console.log("Loading high quality venous tree...");
-      await this.loadTree('venous', {
-        highQuality: true,
-        displayName: 'High Quality Venous Tree'
-      });
     },
 
     /**
@@ -464,33 +446,6 @@ export default {
       await this.loadTree('combined');
     },
 
-    // Toggle between line rendering modes (simplified for basic VTK loader)
-    toggleRenderMode() {
-      console.log('[Model] Toggle render mode called - reloading model');
-      
-      // Emit state changes to parent
-      this.$emit('model-state-updated', { 
-        modelName: "Reloading model..."
-      });
-      
-      // Reload current model
-      this.start(); // Reload the default arterial model
-    },
-
-    // Cycle through performance modes (simplified for basic VTK loader)
-    cyclePerformanceMode() {
-      const modes = ['high', 'medium', 'low', 'auto'];
-      const currentIndex = modes.indexOf(this.currentPerformanceMode);
-      const nextIndex = (currentIndex + 1) % modes.length;
-      const newPerformanceMode = modes[nextIndex];
-      
-      console.log('[Model] Performance mode set to:', newPerformanceMode);
-      
-      // Emit state changes to parent
-      this.$emit('model-state-updated', { 
-        currentPerformanceMode: newPerformanceMode
-      });
-    },
 
     // Handle click on gesture icons area
     handleGestureIconClick(event) {

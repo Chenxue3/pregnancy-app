@@ -66,6 +66,7 @@ export default {
       vtkLoader: null,     // VTK loader utility instance
       _resizeHandler: null, // Store resize handler for cleanup
       clientMounted: false, // Track if component is mounted on client
+      currentModelType: 'arterial', // Track currently loaded model type
       
       // Model configuration for different tree types
       modelConfig: {
@@ -320,9 +321,42 @@ export default {
       await this.loadTree('arterial');
     },
 
-    reciveColoringType(colorModelBy){
-      console.log('[Model] Coloring type:', colorModelBy);
-     
+    async reciveColoringType(colorModelBy){
+      console.log('[Model] Coloring type received:', colorModelBy);
+      
+      if (!this.vtkLoader) {
+        console.warn('[Model] VTK loader not initialized');
+        return;
+      }
+      
+      // Map the received coloring type to our colorMappingType values
+      let colorMappingType = 'pressure'; // default
+      
+      if (colorModelBy === 'flux' || colorModelBy === 'flow') {
+        colorMappingType = 'flux';
+      } else if (colorModelBy === 'default' || colorModelBy === 'vessel-type') {
+        colorMappingType = 'default';
+      } else if (colorModelBy === 'pressure') {
+        colorMappingType = 'pressure';
+      }
+      
+      console.log('[Model] Mapped to colorMappingType:', colorMappingType);
+      
+      // Reload the current model with new color mapping
+      try {
+        this.$emit('model-state-updated', { modelName: 'Updating color mapping...' });
+        
+        await this.loadTree(this.currentModelType, {
+          colorMappingType: colorMappingType,
+          clearScene: true // Clear existing model first
+        });
+        
+        console.log('[Model] Model reloaded with new color mapping:', colorMappingType);
+        
+      } catch (error) {
+        console.error('[Model] Error updating color mapping:', error);
+        this.$emit('model-state-updated', { modelName: 'Error updating color mapping' });
+      }
     },
 
     /**
@@ -343,8 +377,12 @@ export default {
 
       // Handle combined models (load multiple models)
       if (modelType === 'combined') {
+        this.currentModelType = modelType;
         return await this.loadCombinedModels(baseConfig, options);
       }
+      
+      // Track the current model type
+      this.currentModelType = modelType;
 
       // Merge base config with provided options
       const config = {
@@ -364,6 +402,7 @@ export default {
         modelSize: config.modelSize,
         useCylinderGeometry: config.useCylinderGeometry,
         cylinderSegments: config.cylinderSegments,
+        colorMappingType: config.colorMappingType || 'pressure', // Pass color mapping type
         clearPrevious: options.clearScene !== false, // Only clear if not explicitly set to false
         // Disable LoD to avoid showing lines first
         useLoD: false,

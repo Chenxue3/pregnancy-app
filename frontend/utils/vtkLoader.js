@@ -16,6 +16,10 @@ const COLOR_CONSTANTS = {
   DEFAULT_OPACITY: 0.9,
   DEFAULT_RADIUS_FALLBACK: 0.1,
   
+  // Default vessel colors
+  ARTERIAL_COLOR: 0xff2222,  // Red for arterial
+  VENOUS_COLOR: 0x2222ff,    // Blue for venous
+  
   // Color mapping parameters
   COLOR_MAPPING: {
     NONLINEAR_EXPONENT: 0.4,
@@ -92,6 +96,7 @@ export default class VTKLoader {
    * @param {boolean} options.useCylinderGeometry - Use cylinder geometry with radius data (default: true)
    * @param {number} options.cylinderSegments - Number of radial segments for cylinders (default: 8)
    * @param {boolean} options.enablePressureMapping - Enable pressure-based color mapping (default: true)
+   * @param {string} options.colorMappingType - Color mapping type: 'pressure', 'flux', or 'default' (default: 'pressure')
    * @param {boolean} options.clearScene - Clear existing meshes before adding new one (default: true)
    * @param {boolean} options.useLoD - Use Level of Detail optimization for faster loading (default: true)
    * @param {Function} options.onProgress - Progress callback function
@@ -114,6 +119,7 @@ export default class VTKLoader {
       cylinderSegments: 10, // Number of radial segments for cylinders
       enablePressureMapping: true, // Enable pressure mapping by default
       enableFluxMapping: false, // Enable flux mapping by default
+      colorMappingType: 'pressure', // Default to pressure mapping: 'pressure', 'flux', or 'default'
       clearScene: true, // Clear scene by default
       useLoD: true, // Enable LoD by default
       onProgress: null,
@@ -189,9 +195,11 @@ export default class VTKLoader {
     let isReadingCells = false;  // Flag: currently reading cell connectivity
     let isReadingRadius = false;  // Flag: currently reading radius scalar data
     let isReadingPressure = false; // Flag: currently reading pressure scalar data
+    let isReadingFlux = false;  // Flag: currently reading flux scalar data
     let points = [];            // Temporary storage for all point coordinates
     let radiusData = [];        // Array to store radius values for each point
     let pressureData = [];      // Array to store pressure values for each point
+    let fluxData = [];          // Array to store flux values for each point
     let pointCount = 0;         // Total number of points in file
     let cellConnections = [];   // Store cell connectivity information
 
@@ -222,6 +230,7 @@ export default class VTKLoader {
         isReadingCells = true;
         isReadingRadius = false;
         isReadingPressure = false;
+        isReadingFlux = false;
         continue;
       }
       
@@ -231,10 +240,11 @@ export default class VTKLoader {
         isReadingCells = false;
         isReadingRadius = false;
         isReadingPressure = false;
+        isReadingFlux = false;
         continue;
       }
       
-      // Detect SCALARS section - check if it's radius or pressure data
+      // Detect SCALARS section - check if it's radius, pressure, or flux data
       if (line.startsWith('SCALARS')) {
         const parts = line.split(' ');
         if (parts.length > 1) {
@@ -242,12 +252,19 @@ export default class VTKLoader {
           if (scalarName === 'radius') {
             isReadingRadius = true;
             isReadingPressure = false;
+            isReadingFlux = false;
           } else if (scalarName === 'pressure') {
             isReadingRadius = false;
             isReadingPressure = true;
+            isReadingFlux = false;
+          } else if (scalarName === 'flux' || scalarName === 'flow') {
+            isReadingRadius = false;
+            isReadingPressure = false;
+            isReadingFlux = true;
           } else {
             isReadingRadius = false;
             isReadingPressure = false;
+            isReadingFlux = false;
           }
         }
         isReadingPoints = false;
@@ -277,6 +294,12 @@ export default class VTKLoader {
       if (isReadingPressure && pressureData.length < pointCount) {
         const pressures = line.split(' ').filter(x => x !== '').map(parseFloat);
         pressureData.push(...pressures);
+      }
+      
+      // Read flux scalar data
+      if (isReadingFlux && fluxData.length < pointCount) {
+        const fluxes = line.split(' ').filter(x => x !== '').map(parseFloat);
+        fluxData.push(...fluxes);
       }
       
       // Read cell connectivity data
@@ -334,8 +357,8 @@ export default class VTKLoader {
     
     // If cylinder geometry is requested and we have radius data, create cylinders
     if (useCylinderGeometry && radiusData.length > 0 && cellConnections.length > 0) {
-      const cylinderGeometry = this.createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize, config.enablePressureMapping || true);
-      return { geometry: cylinderGeometry, isPointCloud: false, radiusData, pressureData };
+      const cylinderGeometry = this.createCylinderGeometry(points, radiusData, pressureData, fluxData, cellConnections, modelSize, config);
+      return { geometry: cylinderGeometry, isPointCloud: false, radiusData, pressureData, fluxData };
     }
     
     // Debug: if no vertices created, there might be an issue with cell parsing
@@ -348,15 +371,18 @@ export default class VTKLoader {
       // Use original points for point cloud
       geometry.setAttribute('position', new this.THREE.Float32BufferAttribute(points, 3));
       
-      // Add radius and pressure data as attributes if available
+      // Add radius, pressure, and flux data as attributes if available
       if (radiusData.length > 0) {
         geometry.setAttribute('radius', new this.THREE.Float32BufferAttribute(radiusData, 1));
       }
       if (pressureData.length > 0) {
         geometry.setAttribute('pressure', new this.THREE.Float32BufferAttribute(pressureData, 1));
       }
+      if (fluxData.length > 0) {
+        geometry.setAttribute('flux', new this.THREE.Float32BufferAttribute(fluxData, 1));
+      }
       
-      return { geometry, isPointCloud: true, radiusData, pressureData }; 
+      return { geometry, isPointCloud: true, radiusData, pressureData, fluxData }; 
     } else {
       // Set vertex positions for line segments (each vertex has 3 coordinates: x, y, z)
       geometry.setAttribute('position', new this.THREE.Float32BufferAttribute(vertices, 3));
@@ -373,7 +399,7 @@ export default class VTKLoader {
     geometry.translate(-center.x, -center.y, -center.z); // Move to center
     geometry.scale(scale, scale, scale);                  // Scale uniformly
     
-    return { geometry, isPointCloud: false, radiusData, pressureData };
+    return { geometry, isPointCloud: false, radiusData, pressureData, fluxData };
   }
 
   /**
@@ -381,12 +407,13 @@ export default class VTKLoader {
    * @param {Array} points - Array of point coordinates
    * @param {Array} radiusData - Array of radius values for each point
    * @param {Array} pressureData - Array of pressure values for each point
+   * @param {Array} fluxData - Array of flux values for each point
    * @param {Array} cellConnections - Array of cell connectivity data
    * @param {number} modelSize - Target model size for scaling
-   * @param {boolean} enablePressureMapping - Whether to apply pressure-based color mapping
+   * @param {Object} config - Configuration options including colorMappingType
    * @returns {THREE.BufferGeometry} - Combined cylinder geometry with color mapping
    */
-  createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize, enablePressureMapping = true) {
+  createCylinderGeometry(points, radiusData, pressureData, fluxData, cellConnections, modelSize, config) {
     const combinedGeometry = new this.THREE.BufferGeometry();
     const vertices = [];
     const normals = [];
@@ -397,12 +424,18 @@ export default class VTKLoader {
     // Number of radial segments for each cylinder
     const radialSegments = 8;
     
-    // Calculate pressure range for color mapping
+    // Calculate data ranges for color mapping based on colorMappingType
     let minPressure = Infinity;
     let maxPressure = -Infinity;
-    if (pressureData.length > 0) {
+    let minFlux = Infinity;
+    let maxFlux = -Infinity;
+    
+    if (config.colorMappingType === 'pressure' && pressureData.length > 0) {
       minPressure = Math.min(...pressureData);
       maxPressure = Math.max(...pressureData);
+    } else if (config.colorMappingType === 'flux' && fluxData.length > 0) {
+      minFlux = Math.min(...fluxData);
+      maxFlux = Math.max(...fluxData);
     }
     
     // First, detect branching points for smooth junction creation
@@ -434,18 +467,34 @@ export default class VTKLoader {
           let radius1 = radiusData[idx1] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
           let radius2 = radiusData[idx2] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
           
-          // Get pressure values and map to colors
-          let pressure1 = pressureData[idx1] || 0;
-          let pressure2 = pressureData[idx2] || 0;
-          
-          // Map pressure to color based on enablePressureMapping setting
+          // Get data values and map to colors based on colorMappingType
           let color1, color2;
-          if (enablePressureMapping && pressureData.length > 0) {
+          
+          if (config.colorMappingType === 'pressure' && pressureData.length > 0) {
             // Use pressure-based color mapping
+            let pressure1 = pressureData[idx1] || 0;
+            let pressure2 = pressureData[idx2] || 0;
             color1 = this.pressureToColor(pressure1, minPressure, maxPressure);
             color2 = this.pressureToColor(pressure2, minPressure, maxPressure);
+          } else if (config.colorMappingType === 'flux' && fluxData.length > 0) {
+            // Use flux-based color mapping
+            let flux1 = fluxData[idx1] || 0;
+            let flux2 = fluxData[idx2] || 0;
+            color1 = this.fluxToColor(flux1, minFlux, maxFlux);
+            color2 = this.fluxToColor(flux2, minFlux, maxFlux);
+          } else if (config.colorMappingType === 'default') {
+            // Use default arterial/venous colors based on simple heuristics
+            const vesselType1 = this.determineVesselType(idx1, radiusData, pressureData, fluxData);
+            const vesselType2 = this.determineVesselType(idx2, radiusData, pressureData, fluxData);
+            
+            color1 = new this.THREE.Color().setHex(
+              vesselType1 === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
+            );
+            color2 = new this.THREE.Color().setHex(
+              vesselType2 === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
+            );
           } else {
-            // Use default solid color (white for vertex colors)
+            // Use white for vertex colors (will use material color)
             color1 = new this.THREE.Color(1, 1, 1);
             color2 = new this.THREE.Color(1, 1, 1);
           }
@@ -483,7 +532,7 @@ export default class VTKLoader {
     }
     
     // Create smooth junction geometry at branching points
-    this.createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset, enablePressureMapping);
+    this.createBranchingJunctions(branchingPoints, points, radiusData, pressureData, fluxData, minPressure, maxPressure, minFlux, maxFlux, vertices, normals, colors, indices, indexOffset, config);
     
     // Set geometry attributes
     combinedGeometry.setAttribute('position', new this.THREE.Float32BufferAttribute(vertices, 3));
@@ -538,6 +587,99 @@ export default class VTKLoader {
         midToHigh.RED_START + factor * midToHigh.RED_RANGE,
         midToHigh.GREEN_START + factor * midToHigh.GREEN_RANGE,
 midToHigh.BLUE_START
+      );
+    }
+    
+    return color;
+  }
+
+  /**
+   * Determine vessel type for default color mapping
+   * This is a simple heuristic - in practice, vessel type should be provided in the data
+   * @param {number} pointIndex - Index of the point
+   * @param {Array} radiusData - Array of radius values
+   * @param {Array} pressureData - Array of pressure values (if available)
+   * @param {Array} fluxData - Array of flux values (if available)
+   * @returns {string} - 'arterial' or 'venous'
+   */
+  determineVesselType(pointIndex, radiusData, pressureData = null, fluxData = null) {
+    // Simple heuristic: larger vessels with higher pressure/flux are typically arterial
+    const radius = radiusData[pointIndex] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
+    
+    // If we have pressure data, use it
+    if (pressureData && pressureData.length > 0) {
+      const pressure = pressureData[pointIndex] || 0;
+      const avgPressure = pressureData.reduce((a, b) => a + b, 0) / pressureData.length;
+      return pressure > avgPressure ? 'arterial' : 'venous';
+    }
+    
+    // If we have flux data, use it (positive flux typically arterial)
+    if (fluxData && fluxData.length > 0) {
+      const flux = fluxData[pointIndex] || 0;
+      return flux > 0 ? 'arterial' : 'venous';
+    }
+    
+    // Fallback: larger vessels are typically arterial
+    const avgRadius = radiusData.reduce((a, b) => a + b, 0) / radiusData.length;
+    return radius > avgRadius ? 'arterial' : 'venous';
+  }
+
+  /**
+   * Map flux value to color using flow-based color scheme
+   * Blue-to-Red gradient: Blue (low/reverse flow) → Cyan → Green → Yellow → Red (high flow)
+   * @param {number} flux - Flux value (can be negative for reverse flow)
+   * @param {number} minFlux - Minimum flux in dataset
+   * @param {number} maxFlux - Maximum flux in dataset
+   * @returns {THREE.Color} - Color object
+   */
+  fluxToColor(flux, minFlux, maxFlux) {
+    const color = new this.THREE.Color();
+    
+    // Handle edge case where all flux values are the same
+    if (maxFlux === minFlux) {
+      color.setRGB(0.5, 0.5, 0.5); // Gray for uniform flux
+      return color;
+    }
+    
+    // Normalize flux to [-1, 1] range to handle negative values (reverse flow)
+    const range = maxFlux - minFlux;
+    const normalized = (flux - minFlux) / range; // 0 to 1
+    const t = normalized * 2 - 1; // Convert to -1 to 1 range
+    
+    if (t < -0.6) {
+      // Deep blue for strong reverse flow
+      color.setRGB(0.0, 0.2, 0.8);
+    } else if (t < -0.2) {
+      // Blue to cyan for moderate reverse flow
+      const factor = (t + 0.6) / 0.4; // 0 to 1
+      color.setRGB(
+        0.0 + factor * 0.2,
+        0.2 + factor * 0.6,
+        0.8 + factor * 0.2
+      );
+    } else if (t < 0.2) {
+      // Cyan to green for low flow
+      const factor = (t + 0.2) / 0.4; // 0 to 1
+      color.setRGB(
+        0.2 - factor * 0.2,
+        0.8 + factor * 0.2,
+        1.0 - factor * 0.4
+      );
+    } else if (t < 0.6) {
+      // Green to yellow for moderate flow
+      const factor = (t - 0.2) / 0.4; // 0 to 1
+      color.setRGB(
+        0.0 + factor * 1.0,
+        1.0,
+        0.6 - factor * 0.6
+      );
+    } else {
+      // Yellow to red for high flow
+      const factor = (t - 0.6) / 0.4; // 0 to 1
+      color.setRGB(
+        1.0,
+        1.0 - factor * 1.0,
+        0.0
       );
     }
     
@@ -654,9 +796,10 @@ midToHigh.BLUE_START
    * @param {Object} config - Configuration options
    * @param {Array} radiusData - Radius data for points (optional)
    * @param {Array} pressureData - Pressure data for points (optional)
+   * @param {Array} fluxData - Flux data for points (optional)
    * @returns {THREE.Object3D} - Created mesh
    */
-  createVTKMesh(geometry, isPointCloud, config, radiusData = null, pressureData = null) {
+  createVTKMesh(geometry, isPointCloud, config, radiusData = null, pressureData = null, fluxData = null) {
     let vtkMesh;
     
     if (isPointCloud) {
@@ -673,13 +816,24 @@ midToHigh.BLUE_START
     } else if (config.useCylinderGeometry && radiusData && radiusData.length > 0) {
       // Create cylinder mesh with proper material for 3D rendering
       
-      // Use vertex colors if pressure mapping is enabled and pressure data is available
-      const material = new this.THREE.MeshMatcapMaterial
-      ({
-        color: config.enablePressureMapping && pressureData && pressureData.length > 0 ? 0xffffff : config.color,
+      // Determine if we should use vertex colors based on colorMappingType
+      const useVertexColors = (config.colorMappingType === 'pressure' && pressureData && pressureData.length > 0) ||
+                              (config.colorMappingType === 'flux' && fluxData && fluxData.length > 0) ||
+                              (config.colorMappingType === 'default');
+      
+      // Set base color
+      let baseColor = config.color;
+      if (config.colorMappingType === 'default') {
+        baseColor = COLOR_CONSTANTS.ARTERIAL_COLOR; // Default to arterial red
+      } else if (useVertexColors) {
+        baseColor = 0xffffff; // White to allow vertex colors to show through
+      }
+      
+      const material = new this.THREE.MeshMatcapMaterial({
+        color: baseColor,
         transparent: true,
         opacity: config.opacity,
-        vertexColors: config.enablePressureMapping && pressureData && pressureData.length > 0 // Enable vertex colors for pressure mapping
+        vertexColors: useVertexColors
       });
       
       vtkMesh = new this.THREE.Mesh(geometry, material);
@@ -872,16 +1026,19 @@ midToHigh.BLUE_START
    * @param {Array} points - Array of point coordinates
    * @param {Array} radiusData - Array of radius values
    * @param {Array} pressureData - Array of pressure values
+   * @param {Array} fluxData - Array of flux values
    * @param {number} minPressure - Minimum pressure for color mapping
    * @param {number} maxPressure - Maximum pressure for color mapping
+   * @param {number} minFlux - Minimum flux for color mapping
+   * @param {number} maxFlux - Maximum flux for color mapping
    * @param {Array} vertices - Vertices array to append to
    * @param {Array} normals - Normals array to append to
    * @param {Array} colors - Colors array to append to
    * @param {Array} indices - Indices array to append to
    * @param {number} indexOffset - Current index offset
-   * @param {boolean} enablePressureMapping - Whether to apply pressure-based color mapping
+   * @param {Object} config - Configuration options including colorMappingType
    */
-  createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset, enablePressureMapping = true) {
+  createBranchingJunctions(branchingPoints, points, radiusData, pressureData, fluxData, minPressure, maxPressure, minFlux, maxFlux, vertices, normals, colors, indices, indexOffset, config) {
     for (const [branchPointIdx, connectedPoints] of branchingPoints) {
       // Get branch point data
       const branchPos = new this.THREE.Vector3(
@@ -890,10 +1047,23 @@ midToHigh.BLUE_START
         points[branchPointIdx * 3 + 2]
       );
       const branchRadius = radiusData[branchPointIdx] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
-      const branchPressure = pressureData[branchPointIdx] || 0;
-      const branchColor = enablePressureMapping && pressureData.length > 0 ? 
-        this.pressureToColor(branchPressure, minPressure, maxPressure) : 
-        new this.THREE.Color(1, 1, 1);
+      
+      // Get branch point color based on colorMappingType
+      let branchColor;
+      if (config.colorMappingType === 'pressure' && pressureData.length > 0) {
+        const branchPressure = pressureData[branchPointIdx] || 0;
+        branchColor = this.pressureToColor(branchPressure, minPressure, maxPressure);
+      } else if (config.colorMappingType === 'flux' && fluxData.length > 0) {
+        const branchFlux = fluxData[branchPointIdx] || 0;
+        branchColor = this.fluxToColor(branchFlux, minFlux, maxFlux);
+      } else if (config.colorMappingType === 'default') {
+        const vesselType = this.determineVesselType(branchPointIdx, radiusData, pressureData, fluxData);
+        branchColor = new this.THREE.Color().setHex(
+          vesselType === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
+        );
+      } else {
+        branchColor = new this.THREE.Color(1, 1, 1);
+      }
       
       // Create seamless junction geometry
       const junctionGeometry = this.createSeamlessJunction(
@@ -1115,19 +1285,19 @@ midToHigh.BLUE_START
    * @returns {Promise<Object>} - Loading result
    */
   async loadWithLoD(vtkFilePath, config) {
-    const cacheKey = `${vtkFilePath}_${config.enablePressureMapping}`;
+    const cacheKey = `${vtkFilePath}_${config.colorMappingType}`;
     
     // Check if we have cached data
     if (this.lodCache.has(cacheKey)) {
       const cachedData = this.lodCache.get(cacheKey);
-      const mesh = this.createVTKMesh(cachedData.geometry, cachedData.isPointCloud, config, cachedData.radiusData, cachedData.pressureData);
+      const mesh = this.createVTKMesh(cachedData.geometry, cachedData.isPointCloud, config, cachedData.radiusData, cachedData.pressureData, cachedData.fluxData);
       this.addToScene(mesh, config);
       
       if (config.onComplete) {
-        config.onComplete(mesh, cachedData.isPointCloud, cachedData.radiusData, cachedData.pressureData);
+        config.onComplete(mesh, cachedData.isPointCloud, cachedData.radiusData, cachedData.pressureData, cachedData.fluxData);
       }
       
-      return { success: true, mesh, isPointCloud: cachedData.isPointCloud, radiusData: cachedData.radiusData, pressureData: cachedData.pressureData };
+      return { success: true, mesh, isPointCloud: cachedData.isPointCloud, radiusData: cachedData.radiusData, pressureData: cachedData.pressureData, fluxData: cachedData.fluxData };
     }
 
     // Load directly with cylinder geometry instead of showing lines first
@@ -1139,7 +1309,7 @@ midToHigh.BLUE_START
     
     // Create cylinder geometry directly (no lines first)
     const cylinderResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, true, config);
-    const cylinderMesh = this.createVTKMesh(cylinderResult.geometry, cylinderResult.isPointCloud, config, cylinderResult.radiusData, cylinderResult.pressureData);
+    const cylinderMesh = this.createVTKMesh(cylinderResult.geometry, cylinderResult.isPointCloud, config, cylinderResult.radiusData, cylinderResult.pressureData, cylinderResult.fluxData);
     
     // Add cylinder mesh directly
     this.addToScene(cylinderMesh, config);
@@ -1149,15 +1319,16 @@ midToHigh.BLUE_START
       geometry: cylinderResult.geometry,
       isPointCloud: cylinderResult.isPointCloud,
       radiusData: cylinderResult.radiusData,
-      pressureData: cylinderResult.pressureData
+      pressureData: cylinderResult.pressureData,
+      fluxData: cylinderResult.fluxData
     });
 
     // Call completion callback
     if (config.onComplete) {
-      config.onComplete(cylinderMesh, cylinderResult.isPointCloud, cylinderResult.radiusData, cylinderResult.pressureData);
+      config.onComplete(cylinderMesh, cylinderResult.isPointCloud, cylinderResult.radiusData, cylinderResult.pressureData, cylinderResult.fluxData);
     }
 
-    return { success: true, mesh: cylinderMesh, isPointCloud: cylinderResult.isPointCloud, radiusData: cylinderResult.radiusData, pressureData: cylinderResult.pressureData };
+    return { success: true, mesh: cylinderMesh, isPointCloud: cylinderResult.isPointCloud, radiusData: cylinderResult.radiusData, pressureData: cylinderResult.pressureData, fluxData: cylinderResult.fluxData };
   }
 
   /**
@@ -1170,20 +1341,20 @@ midToHigh.BLUE_START
     // Fetch and parse VTK file
     const vtkData = await this.fetchVTKFile(vtkFilePath, config.onProgress);
     const parseResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, config.useCylinderGeometry, config);
-    const { geometry, isPointCloud, radiusData, pressureData } = parseResult;
+    const { geometry, isPointCloud, radiusData, pressureData, fluxData } = parseResult;
     
     // Create appropriate mesh with custom settings
-    const mesh = this.createVTKMesh(geometry, isPointCloud, config, radiusData, pressureData);
+    const mesh = this.createVTKMesh(geometry, isPointCloud, config, radiusData, pressureData, fluxData);
     
     // Add to scene with enhanced lighting
     this.addToScene(mesh, config);
     
     // Call completion callback
     if (config.onComplete) {
-      config.onComplete(mesh, isPointCloud, radiusData, pressureData);
+      config.onComplete(mesh, isPointCloud, radiusData, pressureData, fluxData);
     }
     
-    return { success: true, mesh, isPointCloud, radiusData, pressureData };
+    return { success: true, mesh, isPointCloud, radiusData, pressureData, fluxData };
   }
 
   /**

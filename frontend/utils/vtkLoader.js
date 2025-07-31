@@ -73,6 +73,9 @@ export default class VTKLoader {
     this.wireframeMesh = null;
     this.lightingInitialized = false;
     this.performanceMode = 'high'; // Default performance mode
+    this.allVTKMeshes = []; // Track all loaded VTK meshes for proper cleanup
+    this.enableLoD = true; // Enable Level of Detail optimization
+    this.lodCache = new Map(); // Cache for different LoD levels
   }
 
   /**
@@ -88,6 +91,9 @@ export default class VTKLoader {
    * @param {boolean} options.enableWireframe - Enable wireframe overlay (default: true)
    * @param {boolean} options.useCylinderGeometry - Use cylinder geometry with radius data (default: true)
    * @param {number} options.cylinderSegments - Number of radial segments for cylinders (default: 8)
+   * @param {boolean} options.enablePressureMapping - Enable pressure-based color mapping (default: true)
+   * @param {boolean} options.clearScene - Clear existing meshes before adding new one (default: true)
+   * @param {boolean} options.useLoD - Use Level of Detail optimization for faster loading (default: true)
    * @param {Function} options.onProgress - Progress callback function
    * @param {Function} options.onComplete - Completion callback function
    * @returns {Promise<Object>} - {success: boolean, mesh: THREE.Object3D, error?: Error}
@@ -106,35 +112,27 @@ export default class VTKLoader {
       enableWireframe: true,
       useCylinderGeometry: true, 
       cylinderSegments: 10, // Number of radial segments for cylinders
+      enablePressureMapping: true, // Enable pressure mapping by default
+      clearScene: true, // Clear scene by default
+      useLoD: true, // Enable LoD by default
       onProgress: null,
       onComplete: null,
       ...options
     };
 
-    // Call progress callback
+    // Call progress callback - Initializing
     if (config.onProgress) {
-      config.onProgress(`Loading ${config.displayName}...`, 0);
+      config.onProgress(`Initializing ${config.displayName}`, 0);
     }
 
     try {
-      // Fetch and parse VTK file
-      const vtkData = await this.fetchVTKFile(vtkFilePath, config.onProgress);
-      const parseResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, config.useCylinderGeometry);
-      const { geometry, isPointCloud, radiusData, pressureData } = parseResult;
-      
-      // Create appropriate mesh with custom settings
-      const mesh = this.createVTKMesh(geometry, isPointCloud, config, radiusData, pressureData);
-      
-      // Add to scene with enhanced lighting
-      this.addToScene(mesh, config);
-      
-      // Call completion callback
-      if (config.onComplete) {
-        config.onComplete(mesh, isPointCloud, radiusData, pressureData);
+      // Check if LoD is enabled and use fast loading for initial display
+      if (config.useLoD && this.enableLoD) {
+        return await this.loadWithLoD(vtkFilePath, config);
+      } else {
+        // Standard loading
+        return await this.loadStandard(vtkFilePath, config);
       }
-      
-      return { success: true, mesh, isPointCloud, radiusData, pressureData };
-      
     } catch (error) {
       console.error(`[VTKLoader] Failed to load VTK file ${vtkFilePath}:`, error);
       return { success: false, error };
@@ -149,7 +147,7 @@ export default class VTKLoader {
    */
   async fetchVTKFile(vtkFilePath, onProgress = null) {
     if (onProgress) {
-      onProgress("Downloading file...", 10);
+      onProgress("Downloading model data", 20);
     }
 
     const response = await fetch(vtkFilePath);
@@ -163,7 +161,7 @@ export default class VTKLoader {
     const vtkData = await response.text();
     
     if (onProgress) {
-      onProgress("File downloaded, parsing data...", 30);
+      onProgress("Processing model data", 40);
     }
     
     return vtkData;
@@ -175,11 +173,12 @@ export default class VTKLoader {
    * @param {Function} onProgress - Progress callback
    * @param {number} modelSize - Target model size in units (default: 420)
    * @param {boolean} useCylinderGeometry - Whether to create cylinder geometry
+   * @param {Object} config - Configuration options
    * @returns {Object} - {geometry: THREE.BufferGeometry, isPointCloud: boolean, radiusData: Array, pressureData: Array}
    */
-  parseVTKData(vtkData, onProgress = null, modelSize, useCylinderGeometry = true) {
+  parseVTKData(vtkData, onProgress = null, modelSize, useCylinderGeometry = true, config = {}) {
     if (onProgress) {
-      onProgress("Parsing VTK data structure...", 40);
+      onProgress("Building model geometry", 60);
     }
     
     // Split file content into lines for processing
@@ -201,8 +200,8 @@ export default class VTKLoader {
       
       // Update progress periodically
       if (onProgress && i % 1000 === 0) {
-        const progress = 40 + (i / lines.length) * 30; // 40-70% progress
-        onProgress("Parsing VTK data...", progress);
+        const progress = 60 + (i / lines.length) * 20; // 60-80% progress
+        onProgress("Building model geometry", progress);
       }
       
       // Detect POINTS section - contains 3D coordinates
@@ -334,7 +333,7 @@ export default class VTKLoader {
     
     // If cylinder geometry is requested and we have radius data, create cylinders
     if (useCylinderGeometry && radiusData.length > 0 && cellConnections.length > 0) {
-      const cylinderGeometry = this.createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize);
+      const cylinderGeometry = this.createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize, config.enablePressureMapping || true);
       return { geometry: cylinderGeometry, isPointCloud: false, radiusData, pressureData };
     }
     
@@ -383,9 +382,10 @@ export default class VTKLoader {
    * @param {Array} pressureData - Array of pressure values for each point
    * @param {Array} cellConnections - Array of cell connectivity data
    * @param {number} modelSize - Target model size for scaling
+   * @param {boolean} enablePressureMapping - Whether to apply pressure-based color mapping
    * @returns {THREE.BufferGeometry} - Combined cylinder geometry with color mapping
    */
-  createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize) {
+  createCylinderGeometry(points, radiusData, pressureData, cellConnections, modelSize, enablePressureMapping = true) {
     const combinedGeometry = new this.THREE.BufferGeometry();
     const vertices = [];
     const normals = [];
@@ -437,9 +437,17 @@ export default class VTKLoader {
           let pressure1 = pressureData[idx1] || 0;
           let pressure2 = pressureData[idx2] || 0;
           
-          // Map pressure to color (blue = low pressure, red = high pressure)
-          const color1 = this.pressureToColor(pressure1, minPressure, maxPressure);
-          const color2 = this.pressureToColor(pressure2, minPressure, maxPressure);
+          // Map pressure to color based on enablePressureMapping setting
+          let color1, color2;
+          if (enablePressureMapping && pressureData.length > 0) {
+            // Use pressure-based color mapping
+            color1 = this.pressureToColor(pressure1, minPressure, maxPressure);
+            color2 = this.pressureToColor(pressure2, minPressure, maxPressure);
+          } else {
+            // Use default solid color (white for vertex colors)
+            color1 = new this.THREE.Color(1, 1, 1);
+            color2 = new this.THREE.Color(1, 1, 1);
+          }
           
           // Check if endpoints are branching points for seamless connection
           const isBranchPoint1 = branchingPoints.has(idx1);
@@ -474,7 +482,7 @@ export default class VTKLoader {
     }
     
     // Create smooth junction geometry at branching points
-    this.createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset);
+    this.createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset, enablePressureMapping);
     
     // Set geometry attributes
     combinedGeometry.setAttribute('position', new this.THREE.Float32BufferAttribute(vertices, 3));
@@ -664,13 +672,13 @@ midToHigh.BLUE_START
     } else if (config.useCylinderGeometry && radiusData && radiusData.length > 0) {
       // Create cylinder mesh with proper material for 3D rendering
       
-      // Use vertex colors if pressure data is available
+      // Use vertex colors if pressure mapping is enabled and pressure data is available
       const material = new this.THREE.MeshMatcapMaterial
       ({
-        color: pressureData && pressureData.length > 0 ? 0xffffff : config.color,
+        color: config.enablePressureMapping && pressureData && pressureData.length > 0 ? 0xffffff : config.color,
         transparent: true,
         opacity: config.opacity,
-        vertexColors: pressureData && pressureData.length > 0 // Enable vertex colors for pressure mapping
+        vertexColors: config.enablePressureMapping && pressureData && pressureData.length > 0 // Enable vertex colors for pressure mapping
       });
       
       vtkMesh = new this.THREE.Mesh(geometry, material);
@@ -714,21 +722,29 @@ midToHigh.BLUE_START
    * @param {THREE.Object3D} mesh - Mesh to add
    * @param {Object} config - Configuration options
    */
-  addToScene(mesh) {
-    // Clear existing meshes
-    if (this.currentVTKMesh) {
-      this.scene.remove(this.currentVTKMesh);
-    }
-    if (this.wireframeMesh && this.wireframeMesh !== mesh) {
-      this.scene.remove(this.wireframeMesh);
+  addToScene(mesh, config = {}) {
+    // Clear existing meshes only if clearScene is true (default)
+    if (config.clearScene !== false) {
+      // Remove all previously loaded VTK meshes
+      this.allVTKMeshes.forEach(oldMesh => {
+        this.scene.remove(oldMesh);
+      });
+      this.allVTKMeshes = []; // Clear the tracking array
+      
+      if (this.wireframeMesh) {
+        this.scene.remove(this.wireframeMesh);
+      }
     }
     
     // Setup enhanced lighting (only once)
     this.setupSceneLighting();
     
-    // Store reference and add to scene
-    this.currentVTKMesh = mesh;
+    // Add mesh to scene and track it
     this.scene.add(mesh);
+    this.allVTKMeshes.push(mesh); // Track this mesh for future cleanup
+    
+    // Store current mesh reference
+    this.currentVTKMesh = mesh;
     
     // Add wireframe overlay if it exists
     if (this.wireframeMesh) {
@@ -865,8 +881,9 @@ midToHigh.BLUE_START
    * @param {Array} colors - Colors array to append to
    * @param {Array} indices - Indices array to append to
    * @param {number} indexOffset - Current index offset
+   * @param {boolean} enablePressureMapping - Whether to apply pressure-based color mapping
    */
-  createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset) {
+  createBranchingJunctions(branchingPoints, points, radiusData, pressureData, minPressure, maxPressure, vertices, normals, colors, indices, indexOffset, enablePressureMapping = true) {
     for (const [branchPointIdx, connectedPoints] of branchingPoints) {
       // Get branch point data
       const branchPos = new this.THREE.Vector3(
@@ -876,7 +893,9 @@ midToHigh.BLUE_START
       );
       const branchRadius = radiusData[branchPointIdx] || COLOR_CONSTANTS.DEFAULT_RADIUS_FALLBACK;
       const branchPressure = pressureData[branchPointIdx] || 0;
-      const branchColor = this.pressureToColor(branchPressure, minPressure, maxPressure);
+      const branchColor = enablePressureMapping && pressureData.length > 0 ? 
+        this.pressureToColor(branchPressure, minPressure, maxPressure) : 
+        new this.THREE.Color(1, 1, 1);
       
       // Create seamless junction geometry
       const junctionGeometry = this.createSeamlessJunction(
@@ -1082,9 +1101,142 @@ midToHigh.BLUE_START
   }
 
   /**
+   * Clear temporary data and overlays
+   */
+  clearTemporaryData() {
+    // This method can be extended to clear any temporary visualizations
+    // For now, it's a placeholder for future functionality
+    console.log('[VTKLoader] Cleared temporary data');
+  }
+
+  /**
+   * Load with Level of Detail optimization
+   * First loads a low-detail version quickly, then progressively enhances
+   * @param {string} vtkFilePath - Path to VTK file
+   * @param {Object} config - Configuration options
+   * @returns {Promise<Object>} - Loading result
+   */
+  async loadWithLoD(vtkFilePath, config) {
+    const cacheKey = `${vtkFilePath}_${config.enablePressureMapping}`;
+    
+    // Check if we have cached data
+    if (this.lodCache.has(cacheKey)) {
+      const cachedData = this.lodCache.get(cacheKey);
+      const mesh = this.createVTKMesh(cachedData.geometry, cachedData.isPointCloud, config, cachedData.radiusData, cachedData.pressureData);
+      this.addToScene(mesh, config);
+      
+      if (config.onComplete) {
+        config.onComplete(mesh, cachedData.isPointCloud, cachedData.radiusData, cachedData.pressureData);
+      }
+      
+      return { success: true, mesh, isPointCloud: cachedData.isPointCloud, radiusData: cachedData.radiusData, pressureData: cachedData.pressureData };
+    }
+
+    // Phase 1: Quick loading with reduced detail
+    if (config.onProgress) {
+      config.onProgress(`Loading ${config.displayName}`, 5);
+    }
+
+    const vtkData = await this.fetchVTKFile(vtkFilePath, config.onProgress);
+    
+    // Create low-detail version first (reduced segments, simpler geometry)
+    const lowDetailConfig = {
+      ...config,
+      cylinderSegments: Math.max(4, Math.floor(config.cylinderSegments / 2)), // Reduce segments
+      useCylinderGeometry: false, // Use lines first for speed
+      enableWireframe: false // Disable wireframe for speed
+    };
+    
+    const lowDetailResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, false, lowDetailConfig);
+    const lowDetailMesh = this.createVTKMesh(lowDetailResult.geometry, lowDetailResult.isPointCloud, lowDetailConfig, lowDetailResult.radiusData, lowDetailResult.pressureData);
+    
+    // Add low-detail mesh first
+    this.addToScene(lowDetailMesh, config);
+    
+    // Model loaded and displayed, no need to show progress percentage
+
+    // Call completion callback for quick preview
+    if (config.onComplete) {
+      config.onComplete(lowDetailMesh, lowDetailResult.isPointCloud, lowDetailResult.radiusData, lowDetailResult.pressureData);
+    }
+
+    // Phase 2: Load high-detail version in background
+    setTimeout(async () => {
+      try {
+        
+
+        const highDetailResult = this.parseVTKData(vtkData, null, config.modelSize, config.useCylinderGeometry, config);
+        const highDetailMesh = this.createVTKMesh(highDetailResult.geometry, highDetailResult.isPointCloud, config, highDetailResult.radiusData, highDetailResult.pressureData);
+        
+        // Cache the high-detail version
+        this.lodCache.set(cacheKey, {
+          geometry: highDetailResult.geometry,
+          isPointCloud: highDetailResult.isPointCloud,
+          radiusData: highDetailResult.radiusData,
+          pressureData: highDetailResult.pressureData
+        });
+
+        // Replace low-detail with high-detail
+        this.scene.remove(lowDetailMesh);
+        this.addToScene(highDetailMesh, { ...config, clearScene: false });
+        
+        // Don't show progress when enhancement is complete, model is already displayed
+
+        // Update the current mesh reference
+        this.currentVTKMesh = highDetailMesh;
+        
+      } catch (error) {
+        console.warn('[VTKLoader] Failed to load high-detail version, keeping low-detail:', error);
+      }
+    }, 100); // Small delay to allow UI update
+
+    return { success: true, mesh: lowDetailMesh, isPointCloud: lowDetailResult.isPointCloud, radiusData: lowDetailResult.radiusData, pressureData: lowDetailResult.pressureData };
+  }
+
+  /**
+   * Standard loading without LoD optimization
+   * @param {string} vtkFilePath - Path to VTK file
+   * @param {Object} config - Configuration options
+   * @returns {Promise<Object>} - Loading result
+   */
+  async loadStandard(vtkFilePath, config) {
+    // Fetch and parse VTK file
+    const vtkData = await this.fetchVTKFile(vtkFilePath, config.onProgress);
+    const parseResult = this.parseVTKData(vtkData, config.onProgress, config.modelSize, config.useCylinderGeometry, config);
+    const { geometry, isPointCloud, radiusData, pressureData } = parseResult;
+    
+    // Create appropriate mesh with custom settings
+    const mesh = this.createVTKMesh(geometry, isPointCloud, config, radiusData, pressureData);
+    
+    // Add to scene with enhanced lighting
+    this.addToScene(mesh, config);
+    
+    // Call completion callback
+    if (config.onComplete) {
+      config.onComplete(mesh, isPointCloud, radiusData, pressureData);
+    }
+    
+    return { success: true, mesh, isPointCloud, radiusData, pressureData };
+  }
+
+  /**
+   * Clear LoD cache
+   */
+  clearCache() {
+    this.lodCache.clear();
+    console.log('[VTKLoader] LoD cache cleared');
+  }
+
+  /**
    * Clean up resources
    */
   dispose() {
+    // Remove all tracked VTK meshes
+    this.allVTKMeshes.forEach(mesh => {
+      this.scene.remove(mesh);
+    });
+    this.allVTKMeshes = [];
+    
     if (this.currentVTKMesh) {
       this.scene.remove(this.currentVTKMesh);
       this.currentVTKMesh = null;
@@ -1094,6 +1246,9 @@ midToHigh.BLUE_START
       this.scene.remove(this.wireframeMesh);
       this.wireframeMesh = null;
     }
+    
+    // Clear cache
+    this.lodCache.clear();
     
     this.copperScene = null;
   }

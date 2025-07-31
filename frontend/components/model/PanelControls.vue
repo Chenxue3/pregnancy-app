@@ -17,13 +17,48 @@
       <div class="control-section">
         <h4 class="control-title">Vessel Models</h4>
         <div class="control-group">
-          <v-btn @click="$emit('reload-arterial')" color="error" block class="mb-2">
+          <v-btn 
+            @click="$emit('reload-arterial')" 
+            color="error" 
+            block 
+            class="mb-2"
+            :disabled="isLoading"
+            :loading="isLoading"
+          >
             <v-icon left>mdi-arterial</v-icon>
             Arterial Tree
           </v-btn>
-          <v-btn @click="$emit('load-venous')" color="primary" block class="mb-2">
+          <v-btn 
+            @click="$emit('load-venous')" 
+            color="primary" 
+            block 
+            class="mb-2"
+            :disabled="isLoading"
+            :loading="isLoading"
+          >
             <v-icon left>mdi-heart-pulse</v-icon>
             Venous Tree
+          </v-btn>
+          <v-btn 
+            @click="$emit('load-combined-trees')" 
+            color="purple" 
+            block 
+            class="mb-2"
+            :disabled="isLoading"
+            :loading="isLoading"
+          >
+            <v-icon left>mdi-tree</v-icon>
+            Combined Tree
+          </v-btn>
+          <v-btn 
+            @click="$emit('toggle-pressure-mapping')" 
+            :color="pressureMapping ? 'success' : 'secondary'" 
+            block 
+            class="mb-2"
+            :disabled="isLoading"
+          >
+            <v-icon left>{{ pressureMapping ? 'mdi-palette' : 'mdi-palette-outline' }}</v-icon>
+            {{ pressureMapping ? 'Pressure Colors ON' : 'Pressure Colors OFF' }}
           </v-btn>
         </div>
       </div>
@@ -79,6 +114,18 @@ export default {
       type: Object,
       default: null
     },
+    pressureMapping: {
+      type: Boolean,
+      default: true
+    },
+    isLoading: {
+      type: Boolean,
+      default: false
+    },
+    loadingComplete: {
+      type: Boolean,
+      default: false
+    },
     waveform: { type: Array, default: () => [] }, // [{t, value}]
   },
 
@@ -120,8 +167,7 @@ export default {
   // Events emitted to parent component:
   // - 'reload-arterial': load arterial tree (standard quality)
   // - 'load-venous': load venous tree (standard quality)
-  // - 'load-arterial-cylinders': load arterial tree (high quality)
-  // - 'load-venous-cylinders': load venous tree (high quality)
+  
 
   beforeDestroy() {
     if (this.playheadTimer) cancelAnimationFrame(this.playheadTimer);
@@ -136,7 +182,7 @@ export default {
 .control-panel {
   position: relative;
   width: 100%;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(149, 63, 63, 0.85);
   border-radius: 12px;
   color: white;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -370,15 +416,15 @@ export default {
 }
 
 .green-segment {
-  background: linear-gradient(to right, #2B4B3C, #AA988A); // 深绿色到浅棕色
+  background: linear-gradient(to right, #2B4B3C, #AA988A); 
 }
 
 .orange-segment {
-  background: linear-gradient(to right, #AA988A, #B66A40); // 浅棕色到橙棕色
+  background: linear-gradient(to right, #AA988A, #B66A40); 
 }
 
 .red-segment {
-  background: linear-gradient(to right, #B66A40, #7A3520); // 橙棕色到深棕红色
+  background: linear-gradient(to right, #B66A40, #7A3520); 
 }
 
 .color-labels {

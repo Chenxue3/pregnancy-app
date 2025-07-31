@@ -35,10 +35,13 @@
           :model-name="modelStates.modelName"
           :rendering-type="modelStates.renderingType"
           :pressure-color-mapping="modelStates.pressureColorMapping"
+          :pressure-mapping="modelStates.pressureMapping"
+          :is-loading="modelStates.isLoading"
+          :loading-complete="modelStates.loadingComplete"
           @reload-arterial="handleReloadArterial"
           @load-venous="handleLoadVenous"
-          @load-arterial-cylinders="handleLoadArterialCylinders"
-          @load-venous-cylinders="handleLoadVenousCylinders"
+          @load-combined-trees="handleLoadCombinedTrees"
+          @toggle-pressure-mapping="handleTogglePressureMapping"
         />
       </div>
 
@@ -93,6 +96,9 @@ export default {
         modelName: "Loading...",
         renderingType: "3D Cylinders", // Default to 3D cylinder rendering
         pressureColorMapping: null, // Pressure color mapping for display
+        pressureMapping: true, // Track pressure mapping state
+        isLoading: true, // Track if model is currently loading
+        loadingComplete: false, // Track if loading has completed
       },
       // TODO: get waveform data from model
       waveformData: {
@@ -157,43 +163,41 @@ export default {
   methods: {
     // Handle events from PanelControls and forward to Model component
     handleReloadArterial() {
-      if (this.$refs.modelComponent && this.$refs.modelComponent.reloadModel) {
+      if (this.$refs.modelComponent && this.$refs.modelComponent.loadTree) {
         this.startLoading('Loading arterial tree model...');
-        this.$refs.modelComponent.reloadModel();
+        this.$refs.modelComponent.loadTree('/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk', 'Placental Arterial Tree', 0xff2222, 1.0, 420, true, 10, this.modelStates.pressureMapping, true);
         this.modelStates.renderingType = "3D Cylinders";
       }
     },
 
     handleLoadVenous() {
-      if (
-        this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadVenousTree
-      ) {
+      console.log('[RightPane] Loading venous tree model...');
+      if (this.$refs.modelComponent && this.$refs.modelComponent.loadTree) {
         this.startLoading('Loading venous tree model...');
-        this.$refs.modelComponent.loadVenousTree();
+        this.$refs.modelComponent.loadTree('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk', 'Placental Venous Tree', 0x2222ff, 1.0, 420, true, 10, this.modelStates.pressureMapping, true);
         this.modelStates.renderingType = "3D Cylinders";
       }
     },
 
-    handleLoadArterialCylinders() {
+
+    handleLoadCombinedTrees() {
       if (
         this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadArterialTreeWithCylinders
+        this.$refs.modelComponent.loadCombinedTrees
       ) {
-        this.startLoading('Loading high quality arterial model...');
-        this.$refs.modelComponent.loadArterialTreeWithCylinders();
-        this.modelStates.renderingType = "High Quality 3D";
+        // Remove loading message for combined tree
+        this.$refs.modelComponent.loadCombinedTrees();
+        this.modelStates.renderingType = "Combined Trees";
       }
     },
 
-    handleLoadVenousCylinders() {
+    handleTogglePressureMapping() {
       if (
         this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadVenousTreeWithCylinders
+        this.$refs.modelComponent.togglePressureMapping
       ) {
-        this.startLoading('Loading high quality venous model...');
-        this.$refs.modelComponent.loadVenousTreeWithCylinders();
-        this.modelStates.renderingType = "High Quality 3D";
+        this.startLoading('Updating pressure mapping...');
+        this.$refs.modelComponent.togglePressureMapping();
       }
     },
 
@@ -201,8 +205,27 @@ export default {
     handleModelStateUpdate(newStates) {
       Object.assign(this.modelStates, newStates);
       
-      // Stop loading when model is ready (not showing "Loading..." in name)
-      if (newStates.modelName && !newStates.modelName.includes('Loading')) {
+      // Ensure pressure mapping state is properly synchronized
+      if (newStates.hasOwnProperty('pressureMapping')) {
+        this.modelStates.pressureMapping = newStates.pressureMapping;
+        console.log('[RightPane] Pressure mapping updated to:', newStates.pressureMapping);
+      }
+      
+      // Handle loading state updates
+      if (newStates.hasOwnProperty('isLoading')) {
+        this.modelStates.isLoading = newStates.isLoading;
+        if (newStates.isLoading) {
+          this.startLoading(newStates.modelName || 'Loading model...');
+        }
+      }
+      
+      if (newStates.hasOwnProperty('loadingComplete') && newStates.loadingComplete) {
+        this.modelStates.loadingComplete = newStates.loadingComplete;
+        this.stopLoading();
+      }
+      
+      // Stop loading when model is ready (not showing "Loading..." in name) - fallback
+      if (newStates.modelName && !newStates.modelName.includes('Loading') && !newStates.modelName.includes('(') && !this.modelStates.loadingComplete) {
         this.stopLoading();
       }
     },
@@ -257,7 +280,7 @@ export default {
       const { metrics, interpretation } = metricsData;
       
       // Update model state to reflect ultrasound visualization mode
-      this.modelStates.modelName = `Ultrasound Visualization - ${interpretation.riskLevel.toUpperCase()} Risk`;
+      this.modelStates.modelName = `Ultrasound Analysis`;
       
       // Future: Trigger specific model loading/highlighting based on metrics
       if (interpretation.riskLevel === 'high') {
@@ -318,13 +341,13 @@ export default {
       const { selectedConditions, conditionDetails, combinedEffect } = conditionData;
       
       if (selectedConditions.length === 0) {
-        this.modelStates.modelName = 'Normal Placental Model';
+        this.modelStates.modelName = 'Placental Model';
         return;
       }
       
       // Update model state to reflect condition visualization mode
       const conditionNames = conditionDetails.map(c => c.abbreviation).join(', ');
-      this.modelStates.modelName = `Condition Visualization: ${conditionNames}`;
+      this.modelStates.modelName = `${conditionNames} Analysis`;
       
       // Future: Trigger specific model loading based on conditions
       const hasGrowthRestriction = selectedConditions.some(c => 
@@ -382,7 +405,7 @@ export default {
     
     handleResetToNormal() {
       console.log('[RightPane] Reset to normal placenta');
-      this.modelStates.modelName = 'Normal Placental Model';
+      this.modelStates.modelName = 'Placental Model';
       this.lastConditionData = null;
       
       // Future: Reset model to normal state

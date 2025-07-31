@@ -483,16 +483,11 @@ export default class VTKLoader {
             color1 = this.fluxToColor(flux1, minFlux, maxFlux);
             color2 = this.fluxToColor(flux2, minFlux, maxFlux);
           } else if (config.colorMappingType === 'default') {
-            // Use default arterial/venous colors based on simple heuristics
-            const vesselType1 = this.determineVesselType(idx1, radiusData, pressureData, fluxData);
-            const vesselType2 = this.determineVesselType(idx2, radiusData, pressureData, fluxData);
-            
-            color1 = new this.THREE.Color().setHex(
-              vesselType1 === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
-            );
-            color2 = new this.THREE.Color().setHex(
-              vesselType2 === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
-            );
+            // Use simple default arterial (red) and venous (blue) colors
+            // For simplicity, use the model's base color which should be set correctly
+            // when loading arterial (red) or venous (blue) models
+            color1 = new this.THREE.Color(1, 1, 1); // White - let material color show through
+            color2 = new this.THREE.Color(1, 1, 1); // White - let material color show through
           } else {
             // Use white for vertex colors (will use material color)
             color1 = new this.THREE.Color(1, 1, 1);
@@ -625,7 +620,7 @@ midToHigh.BLUE_START
   }
 
   /**
-   * Map flux value to color using flow-based color scheme
+   * Map flux value to color using flow-based color scheme with enhanced sensitivity for low flux
    * Blue-to-Red gradient: Blue (low/reverse flow) → Cyan → Green → Yellow → Red (high flow)
    * @param {number} flux - Flux value (can be negative for reverse flow)
    * @param {number} minFlux - Minimum flux in dataset
@@ -641,41 +636,82 @@ midToHigh.BLUE_START
       return color;
     }
     
-    // Normalize flux to [-1, 1] range to handle negative values (reverse flow)
-    const range = maxFlux - minFlux;
-    const normalized = (flux - minFlux) / range; // 0 to 1
-    const t = normalized * 2 - 1; // Convert to -1 to 1 range
+    // Calculate dynamic range and apply logarithmic scaling for better sensitivity
+    const absMinFlux = Math.abs(minFlux);
+    const absMaxFlux = Math.abs(maxFlux);
+    const maxAbsValue = Math.max(absMinFlux, absMaxFlux);
     
-    if (t < -0.6) {
+    // Use logarithmic scaling to enhance sensitivity for low values
+    // Add small offset to avoid log(0)
+    const offset = maxAbsValue * 0.01;
+    const logFlux = Math.sign(flux) * Math.log(Math.abs(flux) + offset);
+    const logMin = Math.sign(minFlux) * Math.log(Math.abs(minFlux) + offset);
+    const logMax = Math.sign(maxFlux) * Math.log(Math.abs(maxFlux) + offset);
+    const logRange = logMax - logMin;
+    
+    // Normalize using logarithmic values for better low-value sensitivity
+    let normalized;
+    if (logRange !== 0) {
+      normalized = (logFlux - logMin) / logRange; // 0 to 1
+    } else {
+      normalized = 0.5; // Fallback for edge case
+    }
+    
+    // Apply additional sensitivity curve for very low flux values
+    // Use a power function to expand the low-value range
+    const sensitivityFactor = 0.3; // Lower values = more sensitivity to low flux
+    const enhancedNormalized = Math.pow(normalized, sensitivityFactor);
+    
+    // Convert to -1 to 1 range with enhanced sensitivity
+    const t = enhancedNormalized * 2 - 1;
+    
+    // More granular color mapping with smoother transitions
+    if (t < -0.8) {
       // Deep blue for strong reverse flow
-      color.setRGB(0.0, 0.2, 0.8);
-    } else if (t < -0.2) {
-      // Blue to cyan for moderate reverse flow
-      const factor = (t + 0.6) / 0.4; // 0 to 1
+      color.setRGB(0.0, 0.1, 0.9);
+    } else if (t < -0.5) {
+      // Blue to light blue for moderate reverse flow
+      const factor = (t + 0.8) / 0.3; // 0 to 1
       color.setRGB(
-        0.0 + factor * 0.2,
-        0.2 + factor * 0.6,
-        0.8 + factor * 0.2
+        0.0 + factor * 0.1,
+        0.1 + factor * 0.4,
+        0.9 + factor * 0.1
       );
-    } else if (t < 0.2) {
-      // Cyan to green for low flow
-      const factor = (t + 0.2) / 0.4; // 0 to 1
+    } else if (t < -0.2) {
+      // Light blue to cyan for low reverse flow
+      const factor = (t + 0.5) / 0.3; // 0 to 1
+      color.setRGB(
+        0.1 + factor * 0.1,
+        0.5 + factor * 0.3,
+        1.0 - factor * 0.2
+      );
+    } else if (t < 0.1) {
+      // Cyan to light green for very low forward flow (enhanced sensitivity here)
+      const factor = (t + 0.2) / 0.3; // 0 to 1
       color.setRGB(
         0.2 - factor * 0.2,
         0.8 + factor * 0.2,
-        1.0 - factor * 0.4
+        0.8 - factor * 0.3
       );
-    } else if (t < 0.6) {
-      // Green to yellow for moderate flow
-      const factor = (t - 0.2) / 0.4; // 0 to 1
+    } else if (t < 0.4) {
+      // Light green to green for low-moderate flow
+      const factor = (t - 0.1) / 0.3; // 0 to 1
       color.setRGB(
-        0.0 + factor * 1.0,
+        0.0 + factor * 0.3,
         1.0,
-        0.6 - factor * 0.6
+        0.5 - factor * 0.5
+      );
+    } else if (t < 0.7) {
+      // Green to yellow for moderate flow
+      const factor = (t - 0.4) / 0.3; // 0 to 1
+      color.setRGB(
+        0.3 + factor * 0.7,
+        1.0,
+        0.0
       );
     } else {
       // Yellow to red for high flow
-      const factor = (t - 0.6) / 0.4; // 0 to 1
+      const factor = (t - 0.7) / 0.3; // 0 to 1
       color.setRGB(
         1.0,
         1.0 - factor * 1.0,
@@ -818,13 +854,13 @@ midToHigh.BLUE_START
       
       // Determine if we should use vertex colors based on colorMappingType
       const useVertexColors = (config.colorMappingType === 'pressure' && pressureData && pressureData.length > 0) ||
-                              (config.colorMappingType === 'flux' && fluxData && fluxData.length > 0) ||
-                              (config.colorMappingType === 'default');
+                              (config.colorMappingType === 'flux' && fluxData && fluxData.length > 0);
       
       // Set base color
       let baseColor = config.color;
       if (config.colorMappingType === 'default') {
-        baseColor = COLOR_CONSTANTS.ARTERIAL_COLOR; // Default to arterial red
+        // Use the model's configured color (red for arterial, blue for venous)
+        baseColor = config.color;
       } else if (useVertexColors) {
         baseColor = 0xffffff; // White to allow vertex colors to show through
       }
@@ -1057,10 +1093,8 @@ midToHigh.BLUE_START
         const branchFlux = fluxData[branchPointIdx] || 0;
         branchColor = this.fluxToColor(branchFlux, minFlux, maxFlux);
       } else if (config.colorMappingType === 'default') {
-        const vesselType = this.determineVesselType(branchPointIdx, radiusData, pressureData, fluxData);
-        branchColor = new this.THREE.Color().setHex(
-          vesselType === 'arterial' ? COLOR_CONSTANTS.ARTERIAL_COLOR : COLOR_CONSTANTS.VENOUS_COLOR
-        );
+        // Use simple white for branching points - let material color show through
+        branchColor = new this.THREE.Color(1, 1, 1);
       } else {
         branchColor = new this.THREE.Color(1, 1, 1);
       }

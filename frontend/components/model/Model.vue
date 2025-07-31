@@ -67,6 +67,7 @@ export default {
       _resizeHandler: null, // Store resize handler for cleanup
       clientMounted: false, // Track if component is mounted on client
       currentModelType: 'arterial', // Track currently loaded model type
+      currentColorMappingType: 'pressure', // Track current color mapping type
       
       // Model configuration for different tree types
       modelConfig: {
@@ -342,6 +343,9 @@ export default {
       
       console.log('[Model] Mapped to colorMappingType:', colorMappingType);
       
+      // Store the current color mapping type
+      this.currentColorMappingType = colorMappingType;
+      
       // Reload the current model with new color mapping
       try {
         this.$emit('model-state-updated', { modelName: 'Updating color mapping...' });
@@ -390,6 +394,8 @@ export default {
         ...options,
         // Handle high quality option
         cylinderSegments: options.highQuality ? 12 : (options.cylinderSegments || baseConfig.cylinderSegments),
+        // Use current color mapping type if not explicitly provided
+        colorMappingType: options.colorMappingType || this.currentColorMappingType,
         // Force useCylinderGeometry to true to avoid line rendering first
         useCylinderGeometry: true
       };
@@ -406,11 +412,11 @@ export default {
         clearPrevious: options.clearScene !== false, // Only clear if not explicitly set to false
         // Disable LoD to avoid showing lines first
         useLoD: false,
-        onProgress: (message, progress) => {
+        onProgress: (message) => {
           const progressMessage = `${message}`;
           this.$emit('model-state-updated', { modelName: progressMessage });
         },
-        onComplete: (mesh, isPointCloud, radiusData, pressureData) => {
+        onComplete: () => {
           // Emit state update to parent
           this.$emit('model-state-updated', { modelName: config.displayName });
           
@@ -443,7 +449,8 @@ export default {
           
           await this.loadTree(modelType, {
             ...options,
-            clearScene: i === 0 // Only clear scene for first model
+            clearScene: i === 0, // Only clear scene for first model
+            colorMappingType: options.colorMappingType // Pass through the color mapping type
           });
         }
         

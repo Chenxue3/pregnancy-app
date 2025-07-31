@@ -83,6 +83,7 @@ export default {
         pressureMapping: true, // Track pressure mapping state
         isLoading: false, // Track if model is currently loading - initialize to false
         loadingComplete: false, // Track if loading has completed
+        colorMappingType: 'pressure', // Track current color mapping type
       },
       // TODO: get waveform data from model
       waveformData: {
@@ -147,6 +148,7 @@ export default {
         this.$refs.modelComponent.loadTree('arterial', {
           color: 0xff2222,
           displayName: 'Placental Arterial Tree',
+          colorMappingType: this.modelStates.colorMappingType,
           pressureMapping: this.modelStates.pressureMapping
         });
       }
@@ -158,23 +160,29 @@ export default {
         this.$refs.modelComponent.loadTree('venous', {
           color: 0x2222ff,
           displayName: 'Placental Venous Tree',
+          colorMappingType: this.modelStates.colorMappingType,
           pressureMapping: this.modelStates.pressureMapping
         });
       }
     },
 
     handleColoredModelsByChanged(coloredModelsBy) {
+      console.log('[RightPane] Color mapping changed to:', coloredModelsBy);
+      
+      // Store the color mapping type in our state
       this.modelStates.coloredModelsBy = coloredModelsBy;
+      this.modelStates.colorMappingType = coloredModelsBy; // Keep both for compatibility
+      
+      // Apply the color change to the current model
       this.$refs.modelComponent.reciveColoringType(coloredModelsBy);
     },
 
     // Handle combined model loading
     handleLoadCombinedTrees() {
-      if (
-        this.$refs.modelComponent &&
-        this.$refs.modelComponent.loadCombinedTrees
-      ) {
-        this.$refs.modelComponent.loadCombinedTrees();
+      if (this.$refs.modelComponent && this.$refs.modelComponent.loadTree) {
+        this.$refs.modelComponent.loadTree('combined', {
+          colorMappingType: this.modelStates.colorMappingType
+        });
       }
     },
 

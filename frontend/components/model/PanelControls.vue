@@ -57,19 +57,50 @@
 
       <br />
       
-      <!-- Pressure Color Bar -->
-      <div class="control-section">
-        <h4 class="control-title">Pressure Scale</h4>
+      <!-- Dynamic Color Bar -->
+      <div class="control-section" v-if="coloredModelsBy !== 'default'">
+        <h4 class="control-title">{{this.coloredModelsBy.slice(0, 1).toUpperCase() + this.coloredModelsBy.slice(1)}} Scale</h4>
         <div class="color-bar-container">
-          <div class="color-bar">
-            <div class="color-segment green-segment"></div>
-            <div class="color-segment orange-segment"></div>
-            <div class="color-segment red-segment"></div>
+          <!-- Pressure Color Bar -->
+          <div v-if="coloredModelsBy === 'pressure'" class="color-bar">
+            <div class="color-segment pressure-low-segment"></div>
+            <div class="color-segment pressure-mid-segment"></div>
+            <div class="color-segment pressure-high-segment"></div>
           </div>
+          
+          <!-- Flux Color Bar -->
+          <div v-else-if="coloredModelsBy === 'flux'" class="color-bar">
+            <div class="color-segment flux-reverse-segment"></div>
+            <div class="color-segment flux-low-segment"></div>
+            <div class="color-segment flux-mid-segment"></div>
+            <div class="color-segment flux-high-segment"></div>
+            <div class="color-segment flux-max-segment"></div>
+          </div>
+          
           <div class="color-labels">
-            <span class="label-left">Low</span>
-            <span class="label-center">Normal</span>
-            <span class="label-right">High</span>
+            <span v-if="coloredModelsBy === 'pressure'" class="label-left">Low Pressure</span>
+            <span v-if="coloredModelsBy === 'pressure'" class="label-center">Normal</span>
+            <span v-if="coloredModelsBy === 'pressure'" class="label-right">High Pressure</span>
+            
+            <span v-if="coloredModelsBy === 'flux'" class="label-left">Reverse Flow</span>
+            <span v-if="coloredModelsBy === 'flux'" class="label-right">High Flow</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Default Color Legend -->
+      <div class="control-section" v-if="coloredModelsBy === 'default'">
+        <h4 class="control-title">Vessel Types</h4>
+        <div class="color-bar-container">
+          <div class="vessel-legend">
+            <div class="legend-item">
+              <div class="legend-color arterial-color"></div>
+              <span class="legend-text">Arterial (Red)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color venous-color"></div>
+              <span class="legend-text">Venous (Blue)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -396,16 +427,73 @@ export default {
   }
 }
 
-.green-segment {
+// Pressure Color Segments (Green → Orange → Red)
+.pressure-low-segment {
   background: linear-gradient(to right, #2B4B3C, #AA988A); 
 }
 
-.orange-segment {
+.pressure-mid-segment {
   background: linear-gradient(to right, #AA988A, #B66A40); 
 }
 
-.red-segment {
+.pressure-high-segment {
   background: linear-gradient(to right, #B66A40, #7A3520); 
+}
+
+// Flux Color Segments (Blue → Cyan → Green → Yellow → Red)
+.flux-reverse-segment {
+  background: linear-gradient(to right, #001ACC, #1A4DCC); // Deep blue to light blue
+}
+
+.flux-low-segment {
+  background: linear-gradient(to right, #1A4DCC, #00CCCC); // Light blue to cyan
+}
+
+.flux-mid-segment {
+  background: linear-gradient(to right, #00CCCC, #4DFF4D); // Cyan to green
+}
+
+.flux-high-segment {
+  background: linear-gradient(to right, #4DFF4D, #FFFF00); // Green to yellow
+}
+
+.flux-max-segment {
+  background: linear-gradient(to right, #FFFF00, #FF0000); // Yellow to red
+}
+
+// Default Color Legend
+.vessel-legend {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  
+  &.arterial-color {
+    background: #ff2222; // Arterial red
+  }
+  
+  &.venous-color {
+    background: #2222ff; // Venous blue
+  }
+}
+
+.legend-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
 }
 
 .color-labels {

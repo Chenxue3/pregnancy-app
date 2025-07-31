@@ -723,15 +723,12 @@ midToHigh.BLUE_START
    * @param {Object} config - Configuration options
    */
   addToScene(mesh, config = {}) {
-    // Clear existing meshes only if clearScene is true (default)
-    if (config.clearScene !== false) {
-      // Remove all previously loaded VTK meshes
-      this.allVTKMeshes.forEach(oldMesh => {
-        this.scene.remove(oldMesh);
-      });
-      this.allVTKMeshes = []; // Clear the tracking array
-      
-      if (this.wireframeMesh) {
+    // Clear existing meshes only if clearPrevious is not explicitly set to false
+    if (config.clearPrevious !== false) {
+      if (this.currentVTKMesh) {
+        this.scene.remove(this.currentVTKMesh);
+      }
+      if (this.wireframeMesh && this.wireframeMesh !== mesh) {
         this.scene.remove(this.wireframeMesh);
       }
     }

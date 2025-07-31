@@ -40,8 +40,9 @@
           :loading-complete="modelStates.loadingComplete"
           @reload-arterial="handleReloadArterial"
           @load-venous="handleLoadVenous"
-          @load-combined-trees="handleLoadCombinedTrees"
-          @toggle-pressure-mapping="handleTogglePressureMapping"
+          @load-combined="handleLoadCombinedTrees"
+          @load-arterial-cylinders="handleLoadArterialCylinders"
+          @load-venous-cylinders="handleLoadVenousCylinders"
         />
       </div>
 
@@ -179,25 +180,37 @@ export default {
       }
     },
 
+    handleLoadArterialCylinders() {
+      if (
+        this.$refs.modelComponent &&
+        this.$refs.modelComponent.loadArterialTreeWithCylinders
+      ) {
+        this.startLoading('Loading high quality arterial model...');
+        this.$refs.modelComponent.loadArterialTreeWithCylinders();
+        this.modelStates.renderingType = "High Quality 3D";
+      }
+    },
 
+    handleLoadVenousCylinders() {
+      if (
+        this.$refs.modelComponent &&
+        this.$refs.modelComponent.loadVenousTreeWithCylinders
+      ) {
+        this.startLoading('Loading high quality venous model...');
+        this.$refs.modelComponent.loadVenousTreeWithCylinders();
+        this.modelStates.renderingType = "High Quality 3D";
+      }
+    },
+
+    // Handle combined model loading
     handleLoadCombinedTrees() {
       if (
         this.$refs.modelComponent &&
         this.$refs.modelComponent.loadCombinedTrees
       ) {
-        // Remove loading message for combined tree
+        this.startLoading('Loading combined vascular network...');
         this.$refs.modelComponent.loadCombinedTrees();
-        this.modelStates.renderingType = "Combined Trees";
-      }
-    },
-
-    handleTogglePressureMapping() {
-      if (
-        this.$refs.modelComponent &&
-        this.$refs.modelComponent.togglePressureMapping
-      ) {
-        this.startLoading('Updating pressure mapping...');
-        this.$refs.modelComponent.togglePressureMapping();
+        this.modelStates.renderingType = "Combined Model";
       }
     },
 

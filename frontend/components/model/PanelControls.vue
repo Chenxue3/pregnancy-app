@@ -39,33 +39,13 @@
             <v-icon left>mdi-heart-pulse</v-icon>
             Venous Tree
           </v-btn>
-          <v-btn 
-            @click="$emit('load-combined-trees')" 
-            color="purple" 
-            block 
-            class="mb-2"
-            :disabled="isLoading"
-            :loading="isLoading"
-          >
-            <v-icon left>mdi-tree</v-icon>
-            Combined Tree
-          </v-btn>
-          <v-btn 
-            @click="$emit('toggle-pressure-mapping')" 
-            :color="pressureMapping ? 'success' : 'secondary'" 
-            block 
-            class="mb-2"
-            :disabled="isLoading"
-          >
-            <v-icon left>{{ pressureMapping ? 'mdi-palette' : 'mdi-palette-outline' }}</v-icon>
-            {{ pressureMapping ? 'Pressure Colors ON' : 'Pressure Colors OFF' }}
+          <v-btn @click="$emit('load-combined')" color="success" block class="mb-2">
+            <v-icon left>mdi-network</v-icon>
+            Combined Trees
           </v-btn>
         </div>
       </div>
 
-      
-
-   
       <br />
       
       <!-- Pressure Color Bar -->
@@ -167,7 +147,8 @@ export default {
   // Events emitted to parent component:
   // - 'reload-arterial': load arterial tree (standard quality)
   // - 'load-venous': load venous tree (standard quality)
-  
+  // - 'load-combined': load combined arterial and venous trees
+
 
   beforeDestroy() {
     if (this.playheadTimer) cancelAnimationFrame(this.playheadTimer);

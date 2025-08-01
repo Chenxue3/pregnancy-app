@@ -12,8 +12,10 @@
 .heading {
   text-align: center;
   &__main {
-    color: $clear;
+    color: #313657;
     font-size: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(49, 54, 87, 0.1);
     @media #{map-get($display-breakpoints, 'xl-only')} {
       font-size: 1.8rem;
     }
@@ -24,7 +26,9 @@
   &__sub {
     padding-top: 1px;
     font-size: 1.1rem;
-    color: $text-color;
+    color: #1F6683;
+    font-weight: 500;
+    line-height: 1.6;
     @media #{map-get($display-breakpoints, 'xl-only')} {
       font-size: 1.3rem;
     }
@@ -52,6 +56,8 @@
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  background: linear-gradient(135deg, rgba(209, 199, 181, 0.05) 0%, rgba(108, 144, 185, 0.03) 100%);
+  min-height: 100vh;
 }
 
 .heading {
@@ -59,22 +65,24 @@
   margin-bottom: 30px;
   
   &__main {
-    color: var(--v-primary-base);
+    color: #313657;
     font-size: 2rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 15px;
+    text-shadow: 0 2px 8px rgba(49, 54, 87, 0.1);
   }
   
   &__sub {
-    color: var(--v-secondary-base);
-    font-size: 1.1rem;
-    line-height: 1.6;
+    color: #1F6683;
+    font-size: 1.15rem;
+    line-height: 1.7;
     max-width: 800px;
     margin: 0 auto;
+    font-weight: 500;
   }
 }
 
@@ -85,10 +93,12 @@
 }
 
 .service-section {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(49, 54, 87, 0.9);
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid #1F6683;
   overflow: hidden;
+  box-shadow: 0 4px 20px rgba(31, 102, 131, 0.2);
+  margin-bottom: 20px;
 }
 
 .section-header {
@@ -96,23 +106,31 @@
   align-items: center;
   padding: 20px 25px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.02);
-  transition: background-color 0.3s ease;
+  background: rgba(31, 102, 131, 0.1);
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(108, 144, 185, 0.2);
   
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(31, 102, 131, 0.2);
+    transform: translateY(-1px);
   }
   
   h3 {
     flex: 1;
     margin: 0 15px 0 0;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #D1C7B5;
+    letter-spacing: -0.2px;
+  }
+  
+  .v-icon {
+    color: #6C90B9 !important;
   }
   
   .expand-icon {
     transition: transform 0.3s ease;
+    color: #D1C7B5 !important;
     
     &.rotated {
       transform: rotate(180deg);
@@ -126,24 +144,35 @@
 
 .service-item {
   margin-bottom: 25px;
+  background: rgba(209, 199, 181, 0.05);
+  border-radius: 8px;
+  padding: 20px;
+  border-left: 4px solid #DD3C51;
   
   &:last-child {
     margin-bottom: 0;
   }
   
   h4 {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin-bottom: 10px;
+    color: #6C90B9;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
+    letter-spacing: -0.1px;
+    
+    .v-icon {
+      color: #DD3C51 !important;
+    }
   }
   
   p {
-    color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
+    color: #D1C7B5;
+    line-height: 1.7;
     margin-bottom: 15px;
+    font-size: 1.05em;
+    opacity: 0.95;
   }
 }
 
@@ -151,20 +180,30 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  background: rgba(31, 102, 131, 0.1);
+  border-radius: 6px;
+  padding: 15px;
   
   li {
-    color: rgba(255, 255, 255, 0.85);
-    padding: 8px 0;
+    color: #D1C7B5;
+    padding: 10px 0;
     padding-left: 25px;
     position: relative;
-    line-height: 1.5;
+    line-height: 1.6;
+    font-weight: 400;
+    transition: color 0.2s ease;
+    
+    &:hover {
+      color: #6C90B9;
+    }
     
     &:before {
       content: '•';
-      color: var(--v-primary-base);
+      color: #DD3C51;
       position: absolute;
       left: 8px;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
+      font-weight: bold;
     }
   }
 }
@@ -179,17 +218,19 @@
 }
 
 .regional-info {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(108, 144, 185, 0.1);
   border-radius: 8px;
   padding: 20px;
-  border-left: 4px solid var(--v-primary-base);
+  border-left: 4px solid #DD3C51;
+  border: 1px solid rgba(31, 102, 131, 0.2);
 }
 
 .regional-services-list {
   h5 {
-    color: var(--v-primary-base);
+    color: #DD3C51;
     margin-bottom: 15px;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.1em;
   }
   
   ul {
@@ -198,16 +239,18 @@
     margin: 0;
     
     li {
-      color: rgba(255, 255, 255, 0.85);
-      padding: 5px 0;
-      padding-left: 20px;
+      color: #D1C7B5;
+      padding: 8px 0;
+      padding-left: 25px;
       position: relative;
+      line-height: 1.5;
       
       &:before {
         content: '→';
-        color: var(--v-accent-base);
+        color: #6C90B9;
         position: absolute;
         left: 0;
+        font-weight: bold;
       }
     }
   }
@@ -221,27 +264,43 @@
 }
 
 .resource-card {
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(49, 54, 87, 0.9) 0%, rgba(31, 102, 131, 0.8) 100%) !important;
+  border: 2px solid #1F6683 !important;
+  box-shadow: 0 6px 25px rgba(31, 102, 131, 0.2) !important;
+  transition: all 0.3s ease !important;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(221, 60, 81, 0.2) !important;
+    border-color: #DD3C51 !important;
+  }
   
   .v-card__title {
-    color: rgba(255, 255, 255, 0.95);
-    font-size: 1.1rem;
+    color: #D1C7B5 !important;
+    font-size: 1.2rem !important;
+    font-weight: 700 !important;
+    
+    .v-icon {
+      color: #6C90B9 !important;
+    }
   }
   
   .v-card__subtitle {
-    color: rgba(255, 255, 255, 0.7);
+    color: #6C90B9 !important;
+    font-weight: 500 !important;
   }
   
   .v-card__text {
-    color: rgba(255, 255, 255, 0.85);
+    color: #D1C7B5 !important;
     
     p {
-      margin-bottom: 8px;
-      line-height: 1.5;
+      margin-bottom: 10px;
+      line-height: 1.6;
+      font-size: 0.95em;
       
       strong {
-        color: var(--v-primary-base);
+        color: #DD3C51 !important;
+        font-weight: 600;
       }
     }
   }
@@ -257,6 +316,7 @@
     font-size: 1.6rem;
     flex-direction: column;
     gap: 10px;
+    color: #313657;
   }
   
   .section-header {

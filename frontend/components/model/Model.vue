@@ -9,6 +9,23 @@
           :class="mdAndUp ? 'baseDom-md' : 'baseDom-sm'"
           style="width: 100%; height: 100%;"
         />
+
+        <div
+        ref="threeDControls"
+        class="baseModelControl"
+        :class="mdAndUp ? 'baseModelControl-md' : 'baseModelControl-sm'"
+      >
+        <div class="baseModelCB" :class="mdAndUp ? 'baseModelCB-md' : ''">
+         
+          <img
+            src="~/assets/images/gestures-icons.png"
+            class="h-full w-full md:object-contain"
+            @click="handleGestureIconClick"
+            v-show="mdAndUp" 
+          />
+          
+        </div>
+      </div>
       
       <!-- Fallback template for SSR -->
       <template #fallback>
@@ -49,7 +66,36 @@ export default {
       container: null,     // DOM container for 3D canvas
       vtkLoader: null,     // VTK loader utility instance
       _resizeHandler: null, // Store resize handler for cleanup
-      clientMounted: false // Track if component is mounted on client
+      clientMounted: false, // Track if component is mounted on client
+      currentModelType: 'arterial', // Track currently loaded model type
+      currentColorMappingType: 'pressure', // Track current color mapping type
+      renderingComplete: false, // Track if model is fully rendered and ready
+      
+      // Model configuration for different tree types
+      modelConfig: {
+        arterial: {
+          path: '/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk',
+          displayName: 'Placental Arterial Tree',
+          color: 0xff2222,
+          opacity: 1.0,
+          modelSize: 420,
+          useCylinderGeometry: true,
+          cylinderSegments: 10
+        },
+        venous: {
+          path: '/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk',
+          displayName: 'Placental Venous Tree',
+          color: 0x2222ff,
+          opacity: 1.0,
+          modelSize: 420,
+          useCylinderGeometry: true,
+          cylinderSegments: 10
+        },
+        combined: {
+          displayName: 'Placental Vascular Network',
+          models: ['arterial', 'venous']
+        }
+      }
     };
   },
 
@@ -274,26 +320,127 @@ export default {
     async start(){
       console.log("Loading default placental model...");
       
-      // Load default placental arterial tree model using utility with 3D cylinders
-      const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk');
+      // Use unified loadTree function for default arterial model
+      await this.loadTree('arterial');
+    },
+
+    async reciveColoringType(colorModelBy){
+      console.log('[Model] Coloring type received:', colorModelBy);
+      
+      if (!this.vtkLoader) {
+        console.warn('[Model] VTK loader not initialized');
+        return;
+      }
+      
+      // Map the received coloring type to our colorMappingType values
+      let colorMappingType = 'pressure'; // default
+      
+      if (colorModelBy === 'flux' || colorModelBy === 'flow') {
+        colorMappingType = 'flux';
+      } else if (colorModelBy === 'default' || colorModelBy === 'vessel-type') {
+        colorMappingType = 'default';
+      } else if (colorModelBy === 'pressure') {
+        colorMappingType = 'pressure';
+      }
+      
+      console.log('[Model] Mapped to colorMappingType:', colorMappingType);
+      
+      // Store the current color mapping type
+      this.currentColorMappingType = colorMappingType;
+      
+      // Reload the current model with new color mapping
+      try {
+        // Set rendering state to false when updating color mapping
+        this.renderingComplete = false;
+        this.$emit('model-state-updated', { 
+          modelName: 'Updating color mapping...',
+          renderingComplete: false 
+        });
+        
+        await this.loadTree(this.currentModelType, {
+          colorMappingType: colorMappingType,
+          clearScene: true // Clear existing model first
+        });
+        
+        console.log('[Model] Model reloaded with new color mapping:', colorMappingType);
+        
+      } catch (error) {
+        console.error('[Model] Error updating color mapping:', error);
+        this.$emit('model-state-updated', { modelName: 'Error updating color mapping' });
+      }
+    },
+
+    /**
+     * Universal tree loading function - replaces all duplicated load methods
+     * @param {string} modelType - 'arterial', 'venous', or 'combined'
+     * @param {Object} options - Override default options
+     */
+    async loadTree(modelType, options = {}) {
+      console.log(`[Model] Loading ${modelType} model...`);
+      
+      // Set rendering state to false when starting to load
+      this.renderingComplete = false;
+      this.$emit('model-state-updated', { 
+        modelName: `Loading ${modelType} model...`,
+        renderingComplete: false 
+      });
+      
+      // Get base configuration for this model type
+      const baseConfig = this.modelConfig[modelType];
+      if (!baseConfig) {
+        console.error(`[Model] Unknown model type: ${modelType}`);
+        this.$emit('model-state-updated', { modelName: `Error: Unknown model type ${modelType}` });
+        return;
+      }
+
+      // Handle combined models (load multiple models)
+      if (modelType === 'combined') {
+        this.currentModelType = modelType;
+        return await this.loadCombinedModels(baseConfig, options);
+      }
+      
+      // Track the current model type
+      this.currentModelType = modelType;
+
+      // Merge base config with provided options
+      const config = {
+        ...baseConfig,
+        ...options,
+        // Handle high quality option
+        cylinderSegments: options.highQuality ? 12 : (options.cylinderSegments || baseConfig.cylinderSegments),
+        // Use current color mapping type if not explicitly provided
+        colorMappingType: options.colorMappingType || this.currentColorMappingType,
+        // Force useCylinderGeometry to true to avoid line rendering first
+        useCylinderGeometry: true
+      };
+
+      const vtkPath = this.getAssetPath(config.path);
       const result = await this.vtkLoader.loadVTKFile(vtkPath, {
-        displayName: 'Placental Arterial Tree',
-        color: 0xff2222,
-        opacity:1.0,
-        modelSize: 420,
-        useCylinderGeometry: true, // Default to 3D cylinder rendering
-        cylinderSegments: 10, // Good balance of quality and performance
-        onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
+        displayName: config.displayName,
+        color: config.color,
+        opacity: config.opacity,
+        modelSize: config.modelSize,
+        useCylinderGeometry: config.useCylinderGeometry,
+        cylinderSegments: config.cylinderSegments,
+        colorMappingType: config.colorMappingType || 'pressure', // Pass color mapping type
+        clearPrevious: options.clearScene !== false, // Only clear if not explicitly set to false
+        // Disable LoD to avoid showing lines first
+        useLoD: false,
+        onProgress: (message) => {
+          const progressMessage = `${message}`;
           this.$emit('model-state-updated', { modelName: progressMessage });
         },
-          onComplete: (mesh, isPointCloud, radiusData, pressureData) => {   
-          let newModelName = 'Placental Arterial Tree';
+        onComplete: () => {
+          // Set rendering state to true when loading is complete
+          this.renderingComplete = true;
           
           // Emit state update to parent
-          this.$emit('model-state-updated', { modelName: newModelName });
+          this.$emit('model-state-updated', { 
+            modelName: config.displayName,
+            renderingComplete: true 
+          });
           
-          // Load camera view
+          // Load camera view and resize
           const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
           this.scene.loadViewUrl(viewPath);
           this.scene.onWindowResize();
@@ -303,137 +450,118 @@ export default {
       if (!result.success) {
         this.$emit('model-state-updated', { modelName: `Error: ${result.error.message}` });
       }
+      
+      return result;
+    },
+
+    /**
+     * Load combined models (multiple trees)
+     * @param {Object} baseConfig - Base configuration for combined model
+     * @param {Object} options - Override options
+     */
+    async loadCombinedModels(baseConfig, options = {}) {
+      const modelTypes = options.models || baseConfig.models;
+      
+      try {
+        // Load each model in sequence, don't clear scene for subsequent models
+        for (let i = 0; i < modelTypes.length; i++) {
+          const modelType = modelTypes[i];
+          
+          await this.loadTree(modelType, {
+            ...options,
+            clearScene: i === 0, // Only clear scene for first model
+            colorMappingType: options.colorMappingType // Pass through the color mapping type
+          });
+        }
+        
+        // Update final name and ensure rendering is complete
+        this.renderingComplete = true;
+        this.$emit('model-state-updated', { 
+          modelName: baseConfig.displayName,
+          renderingComplete: true 
+        });
+        
+      } catch (error) {
+        console.error('[Model] Error loading combined models:', error);
+        this.$emit('model-state-updated', { modelName: 'Loading Error' });
+      }
     },
 
     /**
      * Manual reload function - triggered by user button click
-     * Uses 3D cylinder geometry by default
      */
     async reloadModel() {
       console.log("User requested VTK model reload...");
       
-      const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk');
-      const result = await this.vtkLoader.loadVTKFile(vtkPath, {
-        displayName: 'Placental Arterial Tree',
-        color: 0xff3333,
-        opacity: 1,
-        modelSize: 420,
-        useCylinderGeometry: true, // Default to 3D cylinder rendering
-        cylinderSegments: 10,
-        onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
-          this.$emit('model-state-updated', { modelName: progressMessage });
-        },
-        onComplete: (mesh, isPointCloud) => {
-          let newModelName = 'Placental Arterial Tree';
-          
-          // Emit state update to parent
-          this.$emit('model-state-updated', { modelName: newModelName });
-          
-          const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
-          this.scene.loadViewUrl(viewPath);
-        }
+      // Use unified loadTree function for reload
+      await this.loadTree('arterial', {
+        color: 0xff3333, // Slightly different color for reload
+        displayName: 'Placental Arterial Tree (Reloaded)'
       });
-      
-      if (!result.success) {
-        this.$emit('model-state-updated', { modelName: `Error: ${result.error.message}` });
-      }
-    },
-
-    /**
-     * Load arterial tree with cylinder geometry using radius data
-     */
-    async loadArterialTreeWithCylinders() {
-      console.log("Loading arterial tree with cylinder geometry...");
-      
-      const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_arterial_tree.vtk');
-      const result = await this.vtkLoader.loadVTKFile(vtkPath, {
-        displayName: 'Placental Arterial Tree (Cylinders)',
-        color: 0xff2222,
-        opacity: 1,
-        modelSize: 420,
-        useCylinderGeometry: true, // Enable cylinder geometry with radius data
-        cylinderSegments: 12, // Higher quality cylinders
-        onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
-          this.$emit('model-state-updated', { modelName: progressMessage });
-        },
-        onComplete: (mesh, isPointCloud) => {
-          let newModelName = 'Placental Arterial Tree';
-          
-          // Emit state update to parent
-          this.$emit('model-state-updated', { modelName: newModelName });
-          
-          const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
-          this.scene.loadViewUrl(viewPath);
-        }
-      });
-      
-      if (!result.success) {
-        this.$emit('model-state-updated', { modelName: `Error: ${result.error.message}` });
-      }
     },
 
     /**
      * Load venous tree 
      */
     async loadVenousTree() {
-      const vtkPath = this.getAssetPath('/model/healthy_gen_np3ns1_flux_250_venous_tree.vtk');
-      const result = await this.vtkLoader.loadVTKFile(vtkPath, {
-        displayName: 'Placental Venous Tree',
-        color: 0x2222ff,
-        opacity: 1,
-        modelSize: 420,
-        useCylinderGeometry: true, // Default to 3D cylinder rendering
-        cylinderSegments: 10, // Good balance of quality and performance
-        onProgress: (message, progress) => {
-          const progressMessage = `${message} (${Math.round(progress)}%)`;
-          this.$emit('model-state-updated', { modelName: progressMessage });
-        },
-        onComplete: (mesh, isPointCloud) => {
-          let newModelName = 'Placental Venous Tree';
-          
-          // Emit state update to parent
-          this.$emit('model-state-updated', { modelName: newModelName });
-          
-          const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
-          this.scene.loadViewUrl(viewPath);
-        }
-      });
+      console.log("Loading venous tree...");
+      await this.loadTree('venous');
+    },
+
+    /**
+     * Load combined arterial and venous trees
+     */
+    async loadCombinedTrees() {
+      console.log("Loading combined vascular network...");
+      await this.loadTree('combined');
+    },
+
+
+    // Handle click on gesture icons area
+    handleGestureIconClick(event) {
+      const rect = event.target.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const imageWidth = rect.width;
       
-      if (!result.success) {
-        this.$emit('model-state-updated', { modelName: `Error: ${result.error.message}` });
+      // Check if click is in the first quarter (first 25% from left)
+      if (clickX <= imageWidth / 4) {
+        console.log('[Model] Reset gesture clicked - resetting model to default position');
+        this.resetModelToDefault();
       }
     },
 
+    // Reset model to default position, zoom, and remove any effects
+    resetModelToDefault() {
+      if (!this.scene) {
+        console.warn('[Model] Scene not available for reset');
+        return;
+      }
 
-
-    // Toggle between line rendering modes (simplified for basic VTK loader)
-    toggleRenderMode() {
-      console.log('[Model] Toggle render mode called - reloading model');
-      
-      // Emit state changes to parent
-      this.$emit('model-state-updated', { 
-        modelName: "Reloading model..."
-      });
-      
-      // Reload current model
-      this.start(); // Reload the default arterial model
-    },
-
-    // Cycle through performance modes (simplified for basic VTK loader)
-    cyclePerformanceMode() {
-      const modes = ['high', 'medium', 'low', 'auto'];
-      const currentIndex = modes.indexOf(this.currentPerformanceMode);
-      const nextIndex = (currentIndex + 1) % modes.length;
-      const newPerformanceMode = modes[nextIndex];
-      
-      console.log('[Model] Performance mode set to:', newPerformanceMode);
-      
-      // Emit state changes to parent
-      this.$emit('model-state-updated', { 
-        currentPerformanceMode: newPerformanceMode
-      });
+      try {
+        // Reset camera to default view
+        const viewPath = this.getAssetPath('modelView/noInfarct_view.json');
+        this.scene.loadViewUrl(viewPath);
+        
+        // Trigger window resize to ensure proper rendering
+        this.scene.onWindowResize();
+        
+        // Clear any zoom/pan transformations and reset to initial state 
+        if (this.vtkLoader) {
+          // Remove any overlaid data or effects
+          this.vtkLoader.clearTemporaryData();
+        }
+        
+        console.log('[Model] Model reset to default position completed');
+        
+        // Emit state update to parent
+        this.$emit('model-state-updated', { 
+          modelName: this.modelName || 'Placental Arterial Tree',
+          resetTriggered: true
+        });
+        
+      } catch (error) {
+        console.error('[Model] Error resetting model to default:', error);
+      }
     },
 
 
@@ -457,6 +585,35 @@ export default {
 </script>
 
 <style scoped lang="scss">
+
+.baseModelControl {
+  width: 100vw;
+  height: 120px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-content: center;
+  .baseModelCB {
+    width: 240px;
+    height: 70px;
+    position: relative;
+  }
+  .baseModelCB-md {
+    width: 280px;
+    height: 100px;
+  }
+}
+
+.baseModelControl-md {
+  position: fixed;
+  bottom: 10px;
+  padding-left: 100px;
+}
+.baseModelControl-sm {
+  order: -1; // Move to the top of the stack
+  height: 60px;
+}
+
 .model-info{
   font-size: 1.2em;
   left:50%;
@@ -482,30 +639,8 @@ export default {
   height: 100vw;
 }
 
-
-
-// Loading placeholder styles
-.loading-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-  
-  .loading-text {
-    color: #fff;
-    font-size: 18px;
-    font-weight: 300;
-    text-align: center;
-    opacity: 0.8;
-  }
-}
-
 // Responsive adjustments for mobile
 @media (max-width: 768px) {
-  .loading-placeholder {
-    height: 100vw;
-  }
+  // Mobile responsive adjustments
 }
 </style> 

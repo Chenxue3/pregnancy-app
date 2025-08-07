@@ -96,47 +96,18 @@ export default {
     Menu
   },
   
-  data() {
-    return {
-      forceRefresh: 0
-    };
-  },
-  
   computed: {
     middleItems() {
-      // Force reactivity by accessing forceRefresh
-      this.forceRefresh;
       return landingPageData.items.filter(item => item.index <= 2).map(item => ({
         ...item,
         image: this.getImagePath(item.image)
       }));
     },
     rightItems() {
-      // Force reactivity by accessing forceRefresh
-      this.forceRefresh;
       return landingPageData.items.filter(item => item.index > 2).map(item => ({
         ...item,
         image: this.getImagePath(item.image)
       }));
-    }
-  },
-  
-  mounted() {
-    // Force refresh when component is mounted
-    this.forceRefresh++;
-  },
-  
-  activated() {
-    // Force refresh when component is activated (keep-alive)
-    this.forceRefresh++;
-  },
-  
-  watch: {
-    '$route'() {
-      // Force refresh when route changes
-      this.$nextTick(() => {
-        this.forceRefresh++;
-      });
     }
   },
   
@@ -148,26 +119,20 @@ export default {
     },
     
     getImagePath(imagePath) {
-      const cleanPath = imagePath.replace('/pregnancy-app', '');
-      if (process.env.DEPLOY_ENV === 'GH_PAGES') {
-        return `/pregnancy-app${cleanPath}`;
-      }
-      return cleanPath;
+      const basePath = this.$config.basePath || '';
+      // Ensure we don't double-add the base path
+      const cleanPath = imagePath.replace(/^\/pregnancy-app/, '');
+      return basePath + cleanPath;
     },
     
     onImageError(event) {
       console.error('Image failed to load:', event.target.src);
-      // Try to reload the image with a slight delay
-      setTimeout(() => {
-        const img = event.target;
-        const originalSrc = img.src;
-        img.src = '';
-        img.src = originalSrc;
-      }, 100);
+      // Set a fallback or hide the image instead of retrying
+      event.target.style.display = 'none';
     },
     
     onImageLoad(event) {
-      console.log('Image loaded successfully:', event.target.src);
+      // Image loaded successfully, no action needed
     }
   }
 };

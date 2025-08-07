@@ -18,6 +18,12 @@ const routerBase =
       };
 
 export default {
+  // Runtime config to make environment variables available in browser
+  publicRuntimeConfig: {
+    deployEnv: process.env.DEPLOY_ENV || 'local',
+    basePath: process.env.DEPLOY_ENV === "GH_PAGES" ? "/pregnancy-app" : ""
+  },
+  
   // Global page headers: https://go.nuxtjs.dev/config-head
   head: {
     title: "ABI Generic Web App Template",

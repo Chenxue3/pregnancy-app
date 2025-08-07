@@ -61,12 +61,12 @@ export default {
     
     onImageError(event) {
       console.error('Image failed to load:', this.image);
-      // You could set a fallback image here if needed
-      // event.target.src = '/fallback-icon.svg';
+      // Hide the image instead of retrying
+      event.target.style.display = 'none';
     },
     
     onImageLoad() {
-      console.log('Image loaded successfully:', this.image);
+      // Image loaded successfully, no action needed
     }
   }
 }

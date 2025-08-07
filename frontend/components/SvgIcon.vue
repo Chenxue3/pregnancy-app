@@ -29,7 +29,7 @@
     },
     computed: {
       iconPath() {
-        const basePath = process.env.DEPLOY_ENV === "GH_PAGES" ? "/pregnancy-app" : "";
+        const basePath = this.$config.basePath || '';
         
         // If it's an SVG path, use it directly
         if (this.icon.startsWith('/')) {

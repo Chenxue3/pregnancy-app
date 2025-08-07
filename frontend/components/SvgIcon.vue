@@ -29,13 +29,12 @@
     },
     computed: {
       iconPath() {
-        const basePath = this.$config.basePath || '';
-        
-        // If it's an SVG path, use it directly
+        // If it's an SVG path, use it directly (path already processed by plugins/topics.js)
         if (this.icon.startsWith('/')) {
-          return basePath + this.icon;
+          return this.icon;
         }
-        // Otherwise use default icon
+        // Otherwise use default icon with base path
+        const basePath = this.$config.basePath || '';
         return basePath + '/img/landing/pregnancy-icon.svg';
       },
       

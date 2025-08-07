@@ -66,7 +66,7 @@
 </template>
 
 <script>
-import SvgIcon from '../SvgIcon.vue';
+import SvgIcon from '@/components/SvgIcon.vue';
 
 export default {
   components: { SvgIcon },

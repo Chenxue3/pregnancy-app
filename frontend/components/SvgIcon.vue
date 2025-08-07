@@ -29,12 +29,14 @@
     },
     computed: {
       iconPath() {
+        const basePath = process.env.DEPLOY_ENV === "GH_PAGES" ? "/pregnancy-app" : "";
+        
         // If it's an SVG path, use it directly
         if (this.icon.startsWith('/')) {
-          return this.icon;
+          return basePath + this.icon;
         }
         // Otherwise use default icon
-        return '/img/landing/pregnancy-icon.svg';
+        return basePath + '/img/landing/pregnancy-icon.svg';
       },
       
       iconClass() {

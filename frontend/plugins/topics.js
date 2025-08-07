@@ -1,8 +1,29 @@
 import topics from "~/assets/data/topics.json";
 
+// Helper function to fix SVG paths for deployment
+function fixSvgPaths(obj) {
+  if (typeof obj !== 'object' || obj === null) return obj;
+  
+  const basePath = process.env.DEPLOY_ENV === "GH_PAGES" ? "/pregnancy-app" : "";
+  
+  const result = Array.isArray(obj) ? [] : {};
+  
+  for (const key in obj) {
+    if (key === 'icon' && typeof obj[key] === 'string' && obj[key].startsWith('/img/')) {
+      result[key] = basePath + obj[key];
+    } else if (typeof obj[key] === 'object') {
+      result[key] = fixSvgPaths(obj[key]);
+    } else {
+      result[key] = obj[key];
+    }
+  }
+  
+  return result;
+}
+
 export default (_, inject) => {
   inject("getTopics", () => {
-    return topics;
+    return fixSvgPaths(topics);
   }),
     inject("isTopicDisabled", (topic) => {
       return isTopicDisabled(topic);

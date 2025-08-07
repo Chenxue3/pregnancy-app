@@ -131,9 +131,7 @@ export default {
       event.target.style.display = 'none';
     },
     
-    onImageLoad(event) {
-      // Image loaded successfully, no action needed
-    }
+    
   }
 };
 </script>

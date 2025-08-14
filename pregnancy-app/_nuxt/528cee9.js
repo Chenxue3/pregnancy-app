@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[20],{495:function(n,t,e){"use strict";e.r(t),t.default={title:"Fetal Conditions",description:"Understanding fetal conditions and their management.",showModel:!0,contentSections:[]}}}]);

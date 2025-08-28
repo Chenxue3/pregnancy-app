@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[26],{686:function(e,o,t){"use strict";t.r(o),o.default={title:"Sample",description:"Sample",showModel:!1,contentSections:[{id:"1",title:"Sample",icon:"mdi-heart-plus",iconColor:"var(--v-primary-base)",content:"Sample"},{id:"2",title:"Sample",icon:"mdi-heart-plus",iconColor:"var(--v-primary-base)",content:"Sample"}]}}}]);

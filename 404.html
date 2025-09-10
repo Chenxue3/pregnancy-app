@@ -2,23 +2,29 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ABI Web App Template</title>
+  <title>Pregnancy App</title>
   <script type="text/javascript">
-    // Single Page Apps for GitHub Pages
-    // MIT License
-    // https://github.com/rafgraph/spa-github-pages
-    var pathSegmentsToKeep = 1;
-
+    // Redirect to main app for hash routing
+    // This handles direct access to routes in GitHub Pages
     var l = window.location;
-    l.replace(
-      l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-      l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-      l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-      l.hash
-    );
+    var basePath = '/pregnancy-app/';
+    var currentPath = l.pathname;
+    
+    // If accessing a route directly (not the base path), redirect to base with hash
+    if (currentPath !== basePath && currentPath.startsWith(basePath)) {
+      var route = currentPath.replace(basePath, '');
+      if (route) {
+        l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + basePath + '#' + route);
+      } else {
+        l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + basePath);
+      }
+    } else if (currentPath === basePath) {
+      // If accessing base path, just redirect to it (this will load the app)
+      l.replace(l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') + basePath);
+    }
   </script>
 </head>
 <body>
+  <p>Redirecting to Pregnancy App...</p>
 </body>
 </html> 

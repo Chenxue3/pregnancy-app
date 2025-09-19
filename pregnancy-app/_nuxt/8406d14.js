@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[14],{487:function(e){e.exports=JSON.parse('{"title":"Gestational Diabetes","id":"2.c","description":"Sample","showModel":false,"contentSections":[{"id":"2.b.a","title":"Sample","icon":"mdi-heart-plus","iconColor":"var(--v-primary-base)","content":"Sample"}]}')}}]);

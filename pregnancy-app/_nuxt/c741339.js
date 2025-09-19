@@ -1,0 +1,1 @@
+(window.webpackJsonp=window.webpackJsonp||[]).push([[15],{488:function(e){e.exports=JSON.parse('{"title":"Sample","id":"2.b","description":"Sample","showModel":false,"contentSections":[{"id":"2.b.a","title":"Sample","icon":"mdi-heart-plus","iconColor":"var(--v-primary-base)","content":"Sample"}]}')}}]);

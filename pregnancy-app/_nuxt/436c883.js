@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[19],{492:function(t){t.exports=JSON.parse('{"title":"Interact with your placenta","id":"1.c","description":"Interact with your placenta to understand how it works and how it can help you have a healthy pregnancy.","showModel":true}')}}]);

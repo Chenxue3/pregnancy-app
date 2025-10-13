@@ -1,1 +1,0 @@
-(window.webpackJsonp=window.webpackJsonp||[]).push([[24],{546:function(o){o.exports=JSON.parse('{"title":"What does my ultrasound scan mean? ","description":"","id":"3.d","showModel":true}')}}]);
